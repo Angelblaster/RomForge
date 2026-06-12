@@ -1,16 +1,13 @@
 using Patch.Core.Models;
 using System.IO.Compression;
 
-namespace Patch.Core.Services;
+namespace RomForge.Core.Services;
 
 public static class PatchMatcher
 {
     private static readonly HashSet<string> PatchExtensions = new(StringComparer.OrdinalIgnoreCase)
         { ".xdelta", ".xdelta3", ".ips", ".ups", ".bps", ".ppf", ".aps" };
 
-    /// <summary>
-    /// 원본(단일파일 or ZIP)과 패치(단일파일 or 폴더 or ZIP)를 받아 베이스네임으로 매칭
-    /// </summary>
     public static List<PatchPair> Match(string sourcePath, string patchPath)
     {
         var sources = ExpandSource(sourcePath);
@@ -76,10 +73,9 @@ public static class PatchMatcher
         if (ext == ".zip")
         {
             using var zip = ZipFile.OpenRead(path);
-            return zip.Entries
+            return [.. zip.Entries
                 .Where(e => !string.IsNullOrEmpty(e.Name))
-                .Select(e => $"{path}|{e.FullName}")  // 가상경로: zipPath|entryName
-                .ToList();
+                .Select(e => $"{path}|{e.FullName}")];
         }
         return [path];
     }
@@ -89,19 +85,16 @@ public static class PatchMatcher
     {
         if (Directory.Exists(path))
         {
-            return Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
-                .Where(f => PatchExtensions.Contains(Path.GetExtension(f)))
-                .ToList();
+            return [.. Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories).Where(f => PatchExtensions.Contains(Path.GetExtension(f)))];
         }
 
         var ext = Path.GetExtension(path).ToLowerInvariant();
         if (ext == ".zip")
         {
             using var zip = ZipFile.OpenRead(path);
-            return zip.Entries
+            return [.. zip.Entries
                 .Where(e => PatchExtensions.Contains(Path.GetExtension(e.Name)))
-                .Select(e => $"{path}|{e.FullName}")
-                .ToList();
+                .Select(e => $"{path}|{e.FullName}")];
         }
 
         return [path];

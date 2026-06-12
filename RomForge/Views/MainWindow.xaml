@@ -5,8 +5,8 @@
         xmlns:helpers="clr-namespace:RomForge.Helpers"
         xmlns:converters="clr-namespace:RomForge.Converters"
         Title="{Binding AppVersion}"
-        Height="640" Width="960"
-        MinHeight="480" MinWidth="960"
+        Height="640" Width="900"
+        MinHeight="480" MinWidth="900"
         Background="#1E1E1E"
         AllowDrop="True"
         WindowStartupLocation="CenterScreen"
@@ -566,7 +566,7 @@
                                     </GridViewColumn.HeaderTemplate>
                                     <GridViewColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Border Background="{Binding ExtensionBackground}" CornerRadius="4" Padding="8,3" HorizontalAlignment="Left" Margin="2,0">
+                                            <Border Background="{Binding ExtensionBackground}" CornerRadius="4" Padding="8,3" HorizontalAlignment="Center" Margin="2,0">
                                                 <TextBlock Text="{Binding ExtensionLabel}" Foreground="#111111" FontWeight="Bold" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
                                         </DataTemplate>

@@ -25,13 +25,16 @@ public class FileItemViewModel : INotifyPropertyChanged
         get
         {
             var detected = FormatDetector.Detect(FilePath);
+
             if (detected.Format == RomFormat.Unknown || string.IsNullOrEmpty(detected.OutputExtension))
                 return Extension;
+
             return $"{Extension}→{detected.OutputExtension}";
         }
     }
 
     public string Directory => Path.GetDirectoryName(FilePath) ?? string.Empty;
+
     public string FileSize  { get; }
 
     public long FileSizeBytes { get; }
@@ -60,25 +63,21 @@ public class FileItemViewModel : INotifyPropertyChanged
 
     public Brush ExtensionBackground => Extension.ToLowerInvariant() switch
     {
-        // CD 계열
         "chd" => Brush("#A2C4FC"),
         "iso" => Brush("#FFF9A6"),
         "cue" => Brush("#EAE2A6"),
         "gdi" => Brush("#D2DAA5"),
 
-        // 닌텐도 스위치
         "nsp" => Brush("#FFA4B3"),
         "xci" => Brush("#FFB1C1"),
         "nsz" => Brush("#E65C7B"),
         "xcz" => Brush("#CC4466"),
 
-        // 3DS
         "3ds" => Brush("#FFE094"),
         "cci" => Brush("#FFCE73"),
         "cia" => Brush("#C96F2C"),
         "zcci" => Brush("#D48843"),
 
-        // 돌핀 (Wii/GC)
         "gcm" => Brush("#C9BFFF"),
         "gcz" => Brush("#9485EA"),
         "wbfs" => Brush("#B6D0FF"),
@@ -87,6 +86,8 @@ public class FileItemViewModel : INotifyPropertyChanged
 
         _ => Brushes.Transparent
     };
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public FileItemViewModel(string filePath)
     {
@@ -158,7 +159,6 @@ public class FileItemViewModel : INotifyPropertyChanged
         return brush;
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

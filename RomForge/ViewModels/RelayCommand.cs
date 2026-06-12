@@ -8,16 +8,18 @@ public class RelayCommand(Func<object?, Task> executeAsync, Func<object?, bool>?
     private readonly Func<object?, bool>? _canExecute = canExecute;
     private bool _isExecuting;
 
-    public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
-        : this(p => { execute(p); return Task.CompletedTask; }, canExecute) { }
+    public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null) : this(p => { execute(p); return Task.CompletedTask; }, canExecute) { }
 
     public bool CanExecute(object? parameter) => !_isExecuting && (_canExecute?.Invoke(parameter) ?? true);
 
     public async void Execute(object? parameter)
     {
-        if (!CanExecute(parameter)) return;
+        if (!CanExecute(parameter)) 
+            return;
+
         _isExecuting = true;
         CommandManager.InvalidateRequerySuggested();
+
         try   { await _executeAsync(parameter); }
         finally
         {

@@ -1,20 +1,12 @@
 using Common;
+using Patch.Core;
 using System.IO.Compression;
 
-namespace Patch.Core.Services;
+namespace RomForge.Core.Services;
 
 public static class PatchService
 {
-    /// <summary>
-    /// 단건 패치 적용. sourcePath/patchPath 는 실제경로 or "zipPath|entryName" 가상경로.
-    /// </summary>
-    public static async Task ApplyAsync(
-        string sourcePath,
-        string patchPath,
-        PatchConfig config,
-        IProgress<ProgressInfo> progress,
-        Action<string, LogLevel> log,
-        CancellationToken ct)
+    public static async Task ApplyAsync(string sourcePath, string patchPath, PatchConfig config, IProgress<ProgressInfo> ? progress = null, Action<string, LogLevel> ? log = null, CancellationToken ct = default)
     {
         bool sourceIsZipEntry = sourcePath.Contains('|');
         bool patchIsZipEntry  = patchPath.Contains('|');
@@ -33,8 +25,8 @@ public static class PatchService
 
         // 패치 적용
         byte[] result = await Task.Run(() =>
-            UniversalPatcher.Apply(sourceBytes, patchBytes, p =>
-                progress.Report(new ProgressInfo { Percent = (int)(p * 100) })), ct);
+            UniversalPatcher.ApplyPatch(sourceBytes, patchBytes, p =>
+                progress?.Report(new ProgressInfo { Percent = (int)(p * 100) })), ct);
 
         // 출력 경로 결정
         string outputPath = ResolveOutputPath(sourcePath, patchPath, config);

@@ -1,5 +1,5 @@
 ﻿using Common;
-using Patch.Core;
+using RomForge.Core;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -12,6 +12,7 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly AppConfig _config = new AppConfig().Load();
 
     public PatchViewModel PatchVM { get; }
+
     public CompressViewModel CompressVM { get; }
 
     public int SelectedTabIndex
@@ -20,17 +21,58 @@ public class MainViewModel : INotifyPropertyChanged
         set { _selectedTabIndex = value; OnPropertyChanged(); OnPropertyChanged(nameof(ActiveLogEntries)); }
     }
 
-    public System.Collections.ObjectModel.ObservableCollection<LogEntry> ActiveLogEntries =>
-        _selectedTabIndex == 0 ? PatchVM.LogEntries : CompressVM.LogEntries;
+    public System.Collections.ObjectModel.ObservableCollection<LogEntry> ActiveLogEntries => _selectedTabIndex == 0 ? PatchVM.LogEntries : CompressVM.LogEntries;
 
-    #region 설정 프로퍼티 (SettingsWindow 바인딩용)
+    #region 압축 설정 프로퍼티
+
+    public double SwitchCompressLevel
+    {
+        get => _config.Switch.CompressLevel;
+        set { _config.Switch.CompressLevel = (int)value; OnPropertyChanged(); }
+    }
+
+    public bool SwitchIsValidationEnabled
+    {
+        get => _config.Switch.VerifyCompress;
+        set { _config.Switch.VerifyCompress = value; OnPropertyChanged(); }
+    }
+
+    public bool SwitchUseBlockMode
+    {
+        get => _config.Switch.UseBlockMode;
+        set { _config.Switch.UseBlockMode = value; if (value) _config.Switch.UseBlocklessMode = false; OnPropertyChanged(); OnPropertyChanged(nameof(SwitchUseBlocklessMode)); }
+    }
+
+    public bool SwitchUseBlocklessMode
+    {
+        get => _config.Switch.UseBlocklessMode;
+        set { _config.Switch.UseBlocklessMode = value; if (value) _config.Switch.UseBlockMode = false; OnPropertyChanged(); OnPropertyChanged(nameof(SwitchUseBlockMode)); }
+    }
+
+    public double AzaharCompressLevel
+    {
+        get => _config.Azahar.CompressLevel;
+        set { _config.Azahar.CompressLevel = (int)value; OnPropertyChanged(); }
+    }
+
+    public double DolphinCompressLevel
+    {
+        get => _config.Dolphin.CompressLevel;
+        set { _config.Dolphin.CompressLevel = (int)value; OnPropertyChanged(); }
+    }
+
+    #endregion
+
+    #region 패치 설정 프로퍼티
 
     public bool OutputModeNormal
     {
         get => _config.Patch.OutputMode == OutputMode.Normal;
         set
         {
-            if (value) _config.Patch.OutputMode = OutputMode.Normal;
+            if (value)
+                _config.Patch.OutputMode = OutputMode.Normal;
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(OutputModeArcade));
         }
@@ -41,7 +83,9 @@ public class MainViewModel : INotifyPropertyChanged
         get => _config.Patch.OutputMode == OutputMode.Arcade;
         set
         {
-            if (value) _config.Patch.OutputMode = OutputMode.Arcade;
+            if (value) 
+                _config.Patch.OutputMode = OutputMode.Arcade;
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(OutputModeNormal));
         }
@@ -53,6 +97,7 @@ public class MainViewModel : INotifyPropertyChanged
         set
         {
             _config.Patch.OutputFolder = value ? _config.Patch.OutputFolder ?? string.Empty : null;
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(OutputFolder));
         }
@@ -66,8 +111,9 @@ public class MainViewModel : INotifyPropertyChanged
 
     #endregion
 
-    public static string AppVersion =>
-        $"{AppDomain.CurrentDomain.FriendlyName} - Ver {GetVersion()}";
+    public static string AppVersion => $"{AppDomain.CurrentDomain.FriendlyName} - Ver {Utils.ToAppVersionString()}";
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public MainViewModel()
     {
@@ -77,14 +123,5 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void SaveConfig() => _config.Save();
 
-    private static string GetVersion()
-    {
-        var asm = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        return asm is null ? "1.0.0" : $"{asm.Major}.{asm.Minor}.{asm.Build}";
-    }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    protected void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

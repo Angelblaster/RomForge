@@ -10,22 +10,16 @@ namespace RomForge.Helpers;
 
 public static class RichTextBoxLogger
 {
-    public static readonly DependencyProperty LogEntriesProperty =
-        DependencyProperty.RegisterAttached(
-            "LogEntries",
-            typeof(ObservableCollection<LogEntry>),
-            typeof(RichTextBoxLogger),
-            new PropertyMetadata(null, OnLogEntriesChanged));
+    public static readonly DependencyProperty LogEntriesProperty = DependencyProperty.RegisterAttached("LogEntries", typeof(ObservableCollection<LogEntry>), typeof(RichTextBoxLogger), new PropertyMetadata(null, OnLogEntriesChanged));
 
-    public static void SetLogEntries(DependencyObject obj, ObservableCollection<LogEntry> value)
-        => obj.SetValue(LogEntriesProperty, value);
+    public static void SetLogEntries(DependencyObject obj, ObservableCollection<LogEntry> value) => obj.SetValue(LogEntriesProperty, value);
 
-    public static ObservableCollection<LogEntry> GetLogEntries(DependencyObject obj)
-        => (ObservableCollection<LogEntry>)obj.GetValue(LogEntriesProperty);
+    public static ObservableCollection<LogEntry> GetLogEntries(DependencyObject obj) => (ObservableCollection<LogEntry>)obj.GetValue(LogEntriesProperty);
 
     private static void OnLogEntriesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is not RichTextBox rtb) return;
+        if (d is not RichTextBox rtb) 
+            return;
 
         rtb.Document.Blocks.Clear();
         rtb.Document.FontFamily = new FontFamily("Consolas");
@@ -33,10 +27,12 @@ public static class RichTextBoxLogger
         rtb.Document.PagePadding = new Thickness(0);
         rtb.Document.LineHeight = 18;
 
-        if (e.NewValue is ObservableCollection<LogEntry> entries)
+        if (e.NewValue is ObservableCollection<LogEntry> entries) 
             entries.CollectionChanged += (_, args) =>
             {
-                if (args.NewItems == null) return;
+                if (args.NewItems == null) 
+                    return;
+
                 foreach (LogEntry entry in args.NewItems)
                     AppendEntry(rtb, entry);
             };

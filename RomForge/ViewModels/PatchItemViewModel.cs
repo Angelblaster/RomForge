@@ -1,4 +1,3 @@
-using Common;
 using Patch.Core.Models;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -18,11 +17,9 @@ public class PatchItemViewModel(PatchPair pair, int no) : INotifyPropertyChanged
     public string PatchPath { get; } = pair.PatchPath;
     public PairStatus PairStatus { get; } = pair.Status;
 
-    public string SourceFileName => string.IsNullOrEmpty(SourcePath)
-        ? "-" : Path.GetFileName(SourcePath.Contains('|') ? SourcePath.Split('|')[1] : SourcePath);
+    public string SourceFileName => string.IsNullOrEmpty(SourcePath) ? "-" : Path.GetFileName(SourcePath.Contains('|') ? SourcePath.Split('|')[1] : SourcePath);
 
-    public string PatchFileName => string.IsNullOrEmpty(PatchPath)
-        ? "-" : Path.GetFileName(PatchPath.Contains('|') ? PatchPath.Split('|')[1] : PatchPath);
+    public string PatchFileName => string.IsNullOrEmpty(PatchPath) ? "-" : Path.GetFileName(PatchPath.Contains('|') ? PatchPath.Split('|')[1] : PatchPath);
 
     public string StatusLabel => PairStatus switch
     {
@@ -63,6 +60,5 @@ public class PatchItemViewModel(PatchPair pair, int no) : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    protected void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

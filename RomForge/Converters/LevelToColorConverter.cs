@@ -10,7 +10,8 @@ public class LevelToColorConverter : IValueConverter
     {
         if (value is double level)
         {
-            if (level <= 2) return Brushes.White;
+            if (level <= 2) 
+                return Brushes.White;
 
             double t = (level - 3) / 15.0;
             t = Math.Clamp(t, 0, 1);
@@ -21,9 +22,9 @@ public class LevelToColorConverter : IValueConverter
 
             return new SolidColorBrush(Color.FromArgb(255, r, g, b));
         }
+
         return Brushes.White;
     }
 
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotImplementedException();
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotImplementedException();
 }

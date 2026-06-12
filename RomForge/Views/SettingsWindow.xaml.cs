@@ -7,27 +7,26 @@ namespace RomForge.Views;
 
 public partial class SettingsWindow : Window
 {
-    private readonly MainViewModel _vm;
+    private readonly MainViewModel _viewModel;
 
-    public SettingsWindow(MainViewModel vm)
+    public SettingsWindow(MainViewModel viewModel)
     {
         InitializeComponent();
-        DataContext = vm;
-        _vm = vm;
+        DataContext = viewModel;
+        _viewModel = viewModel;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
+
         IntPtr hWnd = new WindowInteropHelper(this).Handle;
         int value = 1;
-        Win32API.DwmSetWindowAttribute(hWnd, 20, ref value, sizeof(int));
+
+        _ = Win32API.DwmSetWindowAttribute(hWnd, 20, ref value, sizeof(int));
     }
 
-    private void SettingsWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-    {
-        _vm.SaveConfig();
-    }
+    private void SettingsWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e) => _viewModel.SaveConfig();
 
     private void BtnBrowseFolder_Click(object sender, RoutedEventArgs e)
     {
@@ -36,7 +35,8 @@ public partial class SettingsWindow : Window
             Description = "출력 폴더 선택",
             UseDescriptionForTitle = true
         };
+
         if (dlg.ShowDialog() == true)
-            _vm.OutputFolder = dlg.SelectedPath;
+            _viewModel.OutputFolder = dlg.SelectedPath;
     }
 }
