@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <VersionPrefix>1.3.0.1</VersionPrefix>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
@@ -11,31 +12,6 @@
     <RootNamespace>RomForge</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="Assets\Images\AddFile.png" />
-    <None Remove="Assets\Images\AddFolder.png" />
-    <None Remove="Assets\Images\Azahar.png" />
-    <None Remove="Assets\Images\BlockMode.png" />
-    <None Remove="Assets\Images\Cancel.png" />
-    <None Remove="Assets\Images\Checked.png" />
-    <None Remove="Assets\Images\Clear.png" />
-    <None Remove="Assets\Images\Compress.png" />
-    <None Remove="Assets\Images\Delete.png" />
-    <None Remove="Assets\Images\Dolphin.png" />
-    <None Remove="Assets\Images\Drag.png" />
-    <None Remove="Assets\Images\Extension.png" />
-    <None Remove="Assets\Images\FileSizeBytes.png" />
-    <None Remove="Assets\Images\Level.png" />
-    <None Remove="Assets\Images\List.png" />
-    <None Remove="Assets\Images\Mame.png" />
-    <None Remove="Assets\Images\Patch.png" />
-    <None Remove="Assets\Images\Progress.png" />
-    <None Remove="Assets\Images\Run.png" />
-    <None Remove="Assets\Images\Settings.png" />
-    <None Remove="Assets\Images\Switch.png" />
-    <None Remove="Assets\Images\Unchecked.png" />
-    <None Remove="Assets\Sounds\complete.mp3" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="icon.ico" />
   </ItemGroup>
   <ItemGroup>
@@ -45,6 +21,7 @@
     <Page Include="App.xaml" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\RomZip\RomZip.Core\RomZip.Core.csproj" />
     <ProjectReference Include="..\RomForge.Core\RomForge.Core.csproj" />
     <!-- RomZip.Core는 기존 프로젝트 경로로 교체 -->
     <!-- <ProjectReference Include="..\..\RomZip\RomZip.Core\RomZip.Core.csproj"/> -->
