@@ -90,7 +90,7 @@ public class ParamSfoBuilder
         foreach (var entry in sorted)
         {
             w.Write((ushort)keyOffset);          // key offset
-            w.Write((byte)entry.Format);         // format (4=utf8, 5=int32)
+            w.Write(entry.Format);         // format (4=utf8, 5=int32)
             w.Write((byte)entry.Type);           // type
             w.Write((uint)entry.DataLen);        // data length
             w.Write((uint)entry.MaxLen);         // max length
@@ -146,7 +146,7 @@ public class ParamSfoBuilder
         {
             Key = key,
             Type = type,
-            Format = type == SfoType.Int32 ? (byte)0x04 : (byte)0x04,
+            Format = type == SfoType.Int32 ? (ushort)0x0404 : (ushort)0x0204,
             Data = value,
             DataLen = bytes,
             MaxLen = maxLen
@@ -162,7 +162,7 @@ public class ParamSfoBuilder
         {
             Key = key,
             Type = SfoType.Int32,
-            Format = 0x04,
+            Format = 0x0404,
             Data = value,
             DataLen = 4,
             MaxLen = 4
@@ -179,7 +179,7 @@ public class ParamSfoBuilder
     {
         public string Key { get; set; } = string.Empty;
         public SfoType Type { get; set; }
-        public byte Format { get; set; }
+        public ushort Format { get; set; }
         public object? Data { get; set; }
         public int DataLen { get; set; }
         public int MaxLen { get; set; }

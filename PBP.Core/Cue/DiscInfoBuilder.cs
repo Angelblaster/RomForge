@@ -1,5 +1,6 @@
 using PBP.Core.Models;
 using PBP.Core.Readers;
+using System.Diagnostics;
 
 namespace PBP.Core.Cue;
 
@@ -16,6 +17,7 @@ public static class DiscInfoBuilder
     public static DiscInfo Build(DiskSource source, string gameTitle)
     {
         var gameId = GameIdReader.ReadFromDisk(source);
+        Debug.WriteLine(gameId);
         return Build(source, gameId, gameTitle);
     }
 

@@ -176,12 +176,14 @@ internal class PsarBuilder(PbpPackOptions options)
         var fileInfo = new FileInfo(isoPath);
         uint actualIsoSize = (uint)fileInfo.Length;
         uint isoSize = actualIsoSize;
+        uint isoPosition = (uint)(output.Position - psarOffset);
 
         // BlockSize 경계 정렬
         if (isoSize % BlockSize != 0)
             isoSize += (uint)(BlockSize - (isoSize % BlockSize));
 
         uint p1Offset = 0, p2Offset = 0;
+        
 
         // PSISOIMG 매직
         WriteAscii(output, "PSISOIMG0000");
@@ -222,7 +224,7 @@ internal class PsarBuilder(PbpPackOptions options)
         WriteZeros(output, (int)(blockCount * 32));
 
         // 데이터 시작 오프셋까지 패딩
-        uint padTo = (uint)(output.Position - psarOffset + psarOffset + 0x100000);
+        uint padTo = (uint)(isoPosition + psarOffset + 0x100000);
         uint curPos = (uint)output.Position;
         if (padTo > curPos)
             WriteZeros(output, (int)(padTo - curPos));

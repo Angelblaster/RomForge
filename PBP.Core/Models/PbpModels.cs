@@ -27,6 +27,7 @@ public class PbpAssets
     /// DATA.PSP - PSP 에뮬레이터 바이너리, BASE.PBP에서 추출
     /// </summary>
     public byte[]? DataPsp  { get; set; }
+    public byte[]? BootPng { get; set; }
 }
 
 /// <summary>

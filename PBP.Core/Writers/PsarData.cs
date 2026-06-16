@@ -1,4 +1,4 @@
-namespace PBP.Core.Writers;
+﻿namespace PBP.Core.Writers;
 
 internal static class PsarData
 {
