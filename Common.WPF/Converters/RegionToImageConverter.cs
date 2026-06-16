@@ -11,8 +11,13 @@ namespace Common.WPF.Converters
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            string productCode = value?.ToString();
-            if (string.IsNullOrEmpty(productCode) || productCode.Length < 7) return null;
+            if (value is null)
+                return null;
+
+            string productCode = value.ToString();
+
+            if (string.IsNullOrEmpty(productCode) || productCode.Length < 7) 
+                return null;
 
             try
             {
