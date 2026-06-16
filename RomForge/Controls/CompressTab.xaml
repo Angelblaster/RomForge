@@ -60,7 +60,7 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Width="480">
+                    <GridViewColumn Width="470">
                         <GridViewColumn.Header>
                             <GridViewColumnHeader Tag="FileName"/>
                         </GridViewColumn.Header>
@@ -68,13 +68,13 @@
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
                                     <Image Source="/Assets/Images/AddFile.png" Width="24" Height="24" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="파일명" Foreground="#BBBBBB" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="파일명" Foreground="#BBBBBB" FontSize="13" FontWeight="Bold" VerticalAlignment="Center" />
                                 </StackPanel>
                             </DataTemplate>
                         </GridViewColumn.HeaderTemplate>
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding FileName}" Padding="6,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding FileName}"/>
+                                <TextBlock Text="{Binding FileName}" Padding="6,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding FilePath}"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
@@ -139,25 +139,7 @@
                                 </Grid>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Width="300">
-                        <GridViewColumn.Header>
-                            <GridViewColumnHeader Tag="Directory"/>
-                        </GridViewColumn.Header>
-                        <GridViewColumn.HeaderTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <Image Source="/Assets/Images/AddFolder.png" Width="24" Height="24" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="경로" Foreground="#BBBBBB" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </GridViewColumn.HeaderTemplate>
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Directory}" Padding="6,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding Directory}"/>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
+                    </GridViewColumn>                    
                 </GridView>
             </ListView.View>
         </ListView>

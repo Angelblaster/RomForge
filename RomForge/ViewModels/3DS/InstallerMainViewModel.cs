@@ -40,13 +40,27 @@ public class InstallerMainViewModel : ToolTabViewModel
     public string SdPath
     {
         get => _sdPath;
-        set { _sdPath = value; InvalidateSession(); OnPropertyChanged(); OnPropertyChanged(nameof(CanLoad)); }
+        set 
+        { 
+            _sdPath = value; 
+            InvalidateSession(); 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(CanLoad));
+            OnPropertyChanged(nameof(CanInstall));
+        }
     }
 
     public string MovablePath
     {
         get => _movablePath;
-        set { _movablePath = value; InvalidateSession(); OnPropertyChanged(); OnPropertyChanged(nameof(CanLoad)); }
+        set 
+        { 
+            _movablePath = value; 
+            InvalidateSession(); 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(CanLoad));
+            OnPropertyChanged(nameof(CanInstall));
+        }
     }
 
     public string StatusMessage
@@ -67,10 +81,11 @@ public class InstallerMainViewModel : ToolTabViewModel
         set { _progressText = value; OnPropertyChanged(); }
     }
 
-    public bool CanLoad => !string.IsNullOrEmpty(SdPath) && !string.IsNullOrEmpty(MovablePath) && !_isLoading && InstalledTitles.IsUnlocked;
+    public bool IsPathValid => !string.IsNullOrEmpty(SdPath) && !string.IsNullOrEmpty(MovablePath);
+    public bool CanLoad => IsPathValid && !_isLoading && InstalledTitles.IsUnlocked;
     public Visibility ProgressPanelVisibility => _isLoading ? Visibility.Visible : Visibility.Collapsed;
     public Visibility CancelButtonVisibility => _extractCts != null ? Visibility.Visible : Visibility.Collapsed;
-    public bool CanInstall => Install.IsUnlocked && Install.IsNotInstalling;
+    public bool CanInstall => CanLoad && Install.IsUnlocked && Install.IsNotInstalling;
 
     public InstallerMainViewModel()
     {

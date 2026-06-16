@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common.WPF", "Common.WPF\Co
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PickPack.Disk", "..\기타\PickPack.Disk\PickPack.Disk.csproj", "{594B5DD3-20AF-3BCB-11D9-125BF4669764}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PBP.Core", "PBP.Core\PBP.Core.csproj", "{40680222-3FC7-4C80-B801-D1E87D4C0D15}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,10 @@ Global
 		{594B5DD3-20AF-3BCB-11D9-125BF4669764}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{594B5DD3-20AF-3BCB-11D9-125BF4669764}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{594B5DD3-20AF-3BCB-11D9-125BF4669764}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40680222-3FC7-4C80-B801-D1E87D4C0D15}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40680222-3FC7-4C80-B801-D1E87D4C0D15}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40680222-3FC7-4C80-B801-D1E87D4C0D15}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40680222-3FC7-4C80-B801-D1E87D4C0D15}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

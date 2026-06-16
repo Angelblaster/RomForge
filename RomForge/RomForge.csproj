@@ -2,7 +2,7 @@
   <PropertyGroup>
     <VersionPrefix>0.0.0.1</VersionPrefix>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -58,6 +58,7 @@
     <ProjectReference Include="..\..\RomZip\RomZip.Core\RomZip.Core.csproj" />
     <ProjectReference Include="..\..\기타\PickPack.Disk\PickPack.Disk.csproj" />
     <ProjectReference Include="..\Common.WPF\Common.WPF.csproj" />
+    <ProjectReference Include="..\PBP.Core\PBP.Core.csproj" />
     <ProjectReference Include="..\RomForge.Core\RomForge.Core.csproj" />
     <!-- RomZip.Core는 기존 프로젝트 경로로 교체 -->
     <!-- <ProjectReference Include="..\..\RomZip\RomZip.Core\RomZip.Core.csproj"/> -->

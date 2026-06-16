@@ -58,8 +58,8 @@
                                         </Border.Background>
                                     </Border>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding ShortDescription}" Foreground="#E8E8F0" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="260"/>
-                                        <TextBlock Text="{Binding Publisher}" Foreground="#8888A8" FontSize="11" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" MaxWidth="260"/>
+                                        <TextBlock Text="{Binding ShortDescription}" Foreground="#E8E8F0" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="260" ToolTip="{Binding FilePath}"/>
+                                        <TextBlock Text="{Binding Publisher}" Foreground="#8888A8" FontSize="11" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" MaxWidth="260"  ToolTip="{Binding FilePath}"/>
                                     </StackPanel>
                                 </StackPanel>
                             </DataTemplate>
@@ -116,15 +116,6 @@
                                         <TextBlock Text="%" Foreground="White" FontSize="10" FontWeight="Bold" Margin="1,0,0,0"/>
                                     </StackPanel>
                                 </Grid>
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="경로" Width="1000">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding FilePath}" Foreground="#8888A8" FontSize="12"
-                                           Margin="8,0" VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding FilePath}"/>
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
