@@ -29,6 +29,7 @@
     <None Remove="Assets\Images\Installer.png" />
     <None Remove="Assets\Images\Loading.png" />
     <None Remove="Assets\Images\Merge.png" />
+    <None Remove="Assets\Images\Metadata.png" />
     <None Remove="Assets\Images\Package.png" />
     <None Remove="Assets\Images\SdCard.png" />
     <None Remove="Assets\Images\Seed.png" />
@@ -92,6 +93,7 @@
     <Resource Include="Assets\Images\Loading.png" />
     <Resource Include="Assets\Images\Mame.png" />
     <Resource Include="Assets\Images\Merge.png" />
+    <Resource Include="Assets\Images\Metadata.png" />
     <Resource Include="Assets\Images\Package.png" />
     <Resource Include="Assets\Images\Patch.png" />
     <Resource Include="Assets\Images\Progress.png" />

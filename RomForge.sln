@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSW.M1.Core", "..\NSW.Tools
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSW.WPF", "..\NSW.Tools\NSW.WPF\NSW.WPF.csproj", "{18490958-EDB6-C456-8C8B-7D3F97CC4FA0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NSW.Core", "..\NSW.Tools\NSW.Core\NSW.Core.csproj", "{A2989F98-4F82-1600-D860-F1E511D92238}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,10 @@ Global
 		{18490958-EDB6-C456-8C8B-7D3F97CC4FA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18490958-EDB6-C456-8C8B-7D3F97CC4FA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{18490958-EDB6-C456-8C8B-7D3F97CC4FA0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2989F98-4F82-1600-D860-F1E511D92238}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2989F98-4F82-1600-D860-F1E511D92238}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2989F98-4F82-1600-D860-F1E511D92238}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2989F98-4F82-1600-D860-F1E511D92238}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
