@@ -35,7 +35,7 @@ public partial class InstalledTitlesTab : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"로드 실패:\n{ex.StackTrace}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"로드 실패:\n{ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

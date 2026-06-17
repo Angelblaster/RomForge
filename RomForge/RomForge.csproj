@@ -18,6 +18,10 @@
     <NoWarn>1701;1702;CS8601;CS8604;CS8618;CA1416</NoWarn>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Assets\Images\Repack.png" />
+    <None Remove="Assets\Images\Unpack.png" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="icon.ico" />
   </ItemGroup>
   <ItemGroup>
@@ -25,7 +29,9 @@
     <Resource Include="Assets\Images\Cartridge.png" />
     <Resource Include="Assets\Images\Convert.png" />
     <Resource Include="Assets\Images\HDD.png" />
+    <Resource Include="Assets\Images\Repack.png" />
     <Resource Include="Assets\Images\SD.png" />
+    <Resource Include="Assets\Images\Unpack.png" />
     <Resource Include="Assets\Images\WriteTab.png" />
     <Resource Include="Assets\Images\DLC.png" />
     <Resource Include="Assets\Images\file.png" />
@@ -85,7 +91,6 @@
     <Resource Include="Assets\Images\Patch.png" />
     <Resource Include="Assets\Images\Progress.png" />
     <Resource Include="Assets\Images\PS1.png" />
-    <Resource Include="Assets\Images\read.png" />
     <Resource Include="Assets\Images\ReadImage.png" />
     <Resource Include="Assets\Images\ReadOpen.png" />
     <Resource Include="Assets\Images\refresh.png" />
@@ -99,7 +104,6 @@
     <Resource Include="Assets\Images\Unchecked.png" />
     <Resource Include="Assets\Images\Usb.png" />
     <Resource Include="Assets\Images\Utility.png" />
-    <Resource Include="Assets\Images\write.png" />
     <Resource Include="Assets\Images\WriteOpen.png" />
     <Resource Include="Assets\Images\zip.png" />
     <Resource Include="Assets\Images\ZipFile.png" />

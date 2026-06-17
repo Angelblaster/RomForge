@@ -41,7 +41,7 @@
                         <Button x:Name="BrowseMovableButton" DockPanel.Dock="Right" Height="32" Width="32" Margin="15,0,0,0" Click="BrowseMovable_Click" Background="Transparent" BorderBrush="Transparent" Padding="0" IsEnabled="{Binding IsIdle}">
                             <Image Source="/Assets/Images/AddFile.png" Width="32" Height="32" Stretch="UniformToFill"/>
                         </Button>
-                        <TextBox x:Name="MovablePathBox" Style="{StaticResource PathBox}" IsReadOnly="True" Text="{Binding MovablePath, Mode=OneWay}"/>
+                        <TextBox x:Name="MovablePathBox" IsReadOnly="True" Text="{Binding MovablePath, Mode=OneWay}"/>
                     </DockPanel>
                 </Grid>
             </DockPanel>

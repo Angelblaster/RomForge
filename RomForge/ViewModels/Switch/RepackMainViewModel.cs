@@ -15,7 +15,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Input;
 
-namespace NSW.M1.ViewModels
+namespace RomForge.ViewModels.Switch
 {
     public class RepackMainViewModel : ToolTabViewModel
     {
@@ -27,13 +27,9 @@ namespace NSW.M1.ViewModels
         private string _progressTime = "00:00 경과";
         private string _patchPath = string.Empty;
         private string _outputPath = string.Empty;
-        private bool _isWorking;
+        private BuildMode? _currentMode;
 
         public ObservableCollection<LogEntry> LogEntries { get; } = [];
-
-
-        public event Action<string, LogLevel>? OnLogRequest;
-        public event Action<bool, BuildMode>? OnWorkingChanged;
 
         public int ProgressPct
         {
@@ -65,26 +61,31 @@ namespace NSW.M1.ViewModels
             set { _outputPath = value; OnPropertyChanged(); OnPropertyChanged(nameof(OutputHintVisibility)); }
         }
 
-        public bool IsWorking
-        {
-            get => _isWorking;
-            set { _isWorking = value; OnPropertyChanged(); }
-        }
+        public string UnpackButtonText => _currentMode == BuildMode.UnpackOnly ? "취소" : "언팩";
+        public string RebuildButtonText => _currentMode == BuildMode.RebuildOnly ? "취소" : "리팩";
+        public string StartButtonText => _currentMode == BuildMode.FullProcess ? "취소" : "언팩 + 리팩 (Full)";
+
+        public bool UnpackEnabled => !IsLocked || _currentMode == BuildMode.UnpackOnly;
+        public bool RebuildEnabled => !IsLocked || _currentMode == BuildMode.RebuildOnly;
+        public bool StartEnabled => !IsLocked || _currentMode == BuildMode.FullProcess;
 
         public Visibility PatchHintVisibility => string.IsNullOrEmpty(PatchPath) ? Visibility.Visible : Visibility.Collapsed;
+
         public Visibility OutputHintVisibility => string.IsNullOrEmpty(OutputPath) ? Visibility.Visible : Visibility.Collapsed;
 
         public record BuildContext(IList<GameFile> GameFiles, GameMetadata? Metadata, ApplicationControlProperty.Language ForcedLanguage);
+
         public BuildContext? Context { get; set; }
 
         public ICommand BrowsePatchCommand { get; }
+
         public ICommand BrowseOutputCommand { get; }
 
         public RepackMainViewModel()
         {
             OutputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "output");
-            BrowsePatchCommand = new RelayCommand(async _ => await BrowsePatch(), null);
-            BrowseOutputCommand = new RelayCommand(async _ => await BrowseOutput(), null);
+            BrowsePatchCommand = new RelayCommand(async _ => await BrowsePatch());
+            BrowseOutputCommand = new RelayCommand(async _ => await BrowseOutput());
         }
 
         public async Task StartAsync(BuildMode mode)
@@ -99,23 +100,40 @@ namespace NSW.M1.ViewModels
                 !MessageBoxHelper.ShowQuestion("기존 언팩 데이터를 삭제하고 새로 진행할까요?"))
                 return;
 
-            IsWorking = true;
-            OnWorkingChanged?.Invoke(true, mode);
             _totalSw.Restart();
 
-            try { await ExecuteBuildAsync(mode, req); }
-            finally
+            _currentMode = mode;
+            NotifyButtonStates();
+            using (BeginWork())
             {
-                IsWorking = false;
-                OnWorkingChanged?.Invoke(false, mode);
-                ProgressPct = 0;
+                try 
+                { 
+                    await ExecuteBuildAsync(mode, req); 
+                }
+                finally
+                {
+                    ProgressPct = 0;
+                }
             }
+
+            _currentMode = null;
+            NotifyButtonStates();
+        }
+
+        private void NotifyButtonStates()
+        {
+            OnPropertyChanged(nameof(UnpackButtonText));
+            OnPropertyChanged(nameof(RebuildButtonText));
+            OnPropertyChanged(nameof(StartButtonText));
+            OnPropertyChanged(nameof(UnpackEnabled));
+            OnPropertyChanged(nameof(RebuildEnabled));
+            OnPropertyChanged(nameof(StartEnabled));
         }
 
         public void Cancel()
         {
             _cts?.Cancel();
-            Log("🛑 사용자에 의해 취소 요청됨...", LogLevel.Error);
+            Log("사용자에 의해 취소 요청됨...", LogLevel.Error);
         }
 
         private async Task ExecuteBuildAsync(BuildMode mode, BuildRequest req)
@@ -138,24 +156,20 @@ namespace NSW.M1.ViewModels
                     req.OverrideKeyGeneration = 1;
                     //req.TargetIdOffset = 2;
                     string finalResult = NspBuildService.Run(req, mode, progress, (msg, lvl) => Log(msg, lvl), token);
-                    Log($"\n✓ {mode} 완료! 총 소요: {_totalSw.Elapsed:mm\\:ss}", LogLevel.Ok);
-                    MessageBoxHelper.ShowInfo($"{mode} 작업이 완료되었습니다!\n{finalResult}");
+                    Log($"{mode} 완료! 총 소요: {_totalSw.Elapsed:mm\\:ss}", LogLevel.Ok);
                     if (Directory.Exists(req.OutputDir)) Process.Start("explorer.exe", $"\"{req.OutputDir}\"");
                 }
                 catch (OperationCanceledException)
                 {
-                    Log($"\n🛑 {mode} 작업이 취소되었습니다.", LogLevel.Error);
-                    MessageBoxHelper.ShowWarning("작업이 취소되었습니다.");
+                    Log($"{mode} 작업이 취소되었습니다.", LogLevel.Error);
                 }
                 catch (UnpackMetadataNotFoundException bex)
                 {
-                    Log($"\n❌ {mode} 실패: {bex.Message}", LogLevel.Error);
-                    MessageBoxHelper.ShowError($"{mode} 작업 중 오류가 발생했습니다:\n{bex.Message}");
+                    Log($"{mode} 실패: {bex.Message}", LogLevel.Error);
                 }
                 catch (Exception ex)
                 {
                     Log($"오류: {ex.Message}", LogLevel.Error);
-                    Log(ex.StackTrace ?? "", LogLevel.Error);
                 }
                 finally { _cts?.Dispose(); _cts = null; }
             }, token);
@@ -197,6 +211,7 @@ namespace NSW.M1.ViewModels
             if (dlg.ShowDialog() == true) OutputPath = dlg.FolderName;
         }
 
-        private void Log(string msg, LogLevel level = LogLevel.Info) => OnLogRequest?.Invoke(msg, level);
+        private void Log(string msg, LogLevel level = LogLevel.Info) => Application.Current.Dispatcher.Invoke(() => LogEntries.Add(new LogEntry { Message = msg, Level = level }));
+
     }
 }

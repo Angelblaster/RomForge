@@ -87,7 +87,7 @@
                                    Width="24" Height="24" Margin="6,0,8,0"
                                    VerticalAlignment="Center"/>
 
-                            <TextBox Style="{StaticResource PathBox}" IsEnabled="{Binding IsIdle}" Grid.Column="1"
+                            <TextBox IsEnabled="{Binding IsIdle}" Grid.Column="1"
                                      Text="{Binding WriteImagePath, UpdateSourceTrigger=PropertyChanged}"
                                      FontSize="12"
                                      VerticalAlignment="Center"
@@ -142,7 +142,7 @@
                                    Width="24" Height="24" Margin="6,0,8,0"
                                    VerticalAlignment="Center"/>
 
-                            <TextBox Style="{StaticResource PathBox}" IsEnabled="{Binding IsIdle}" Grid.Column="1"
+                            <TextBox IsEnabled="{Binding IsIdle}" Grid.Column="1"
                                      Text="{Binding ReadImagePath, UpdateSourceTrigger=PropertyChanged}"
                                      FontSize="12"
                                      VerticalAlignment="Center"

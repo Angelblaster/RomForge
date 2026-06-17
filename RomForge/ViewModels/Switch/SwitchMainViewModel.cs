@@ -1,5 +1,4 @@
 ﻿using Common.WPF.ViewModels;
-using NSW.M1.ViewModels;
 using RomForge.Models;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;

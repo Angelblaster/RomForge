@@ -87,12 +87,27 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="2*"/>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" Content="언팩" Click="BtnUnpack_Click" Margin="0,0,5,0"/>
-                <Button Grid.Column="1" Content="리팩" Click="BtnRebuild_Click" Margin="5,0,5,0"/>
-                <Button Grid.Column="2" Content="언팩 + 리팩 (Full)" Click="BtnStart_Click" Margin="5,0,0,0"/>
+                <Button Grid.Column="0" Style="{StaticResource GrayButton}" Click="BtnUnpack_Click" Margin="0,0,5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Assets/Images/Unpack.png" Width="24" Height="24" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding UnpackButtonText}" IsEnabled="{Binding UnpackEnabled}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="1" Style="{StaticResource GrayButton}" Click="BtnRebuild_Click" Margin="5,0,5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Assets/Images/Repack.png" Width="24" Height="24" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding RebuildButtonText}" IsEnabled="{Binding RebuildEnabled}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="2" Style="{StaticResource GrayButton}" Click="BtnStart_Click" Margin="5,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="/Assets/Images/Run.png" Width="24" Height="24" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StartButtonText}" IsEnabled="{Binding StartEnabled}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </Grid>
 
-            <Grid Grid.Row="3" Margin="0,0,0,10" Visibility="{Binding IsWorking, Converter={StaticResource BoolToVisibility}}">
+            <Grid Grid.Row="3" Margin="0,0,0,10" Visibility="{Binding IsLocked, Converter={StaticResource BoolToVisibility}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
