@@ -155,7 +155,7 @@
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <GridViewColumn Header="크기" Width="90">
+                        <GridViewColumn Header="용량" Width="90">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding SizeText}" Foreground="#8888A8" FontSize="12" Margin="8,0" HorizontalAlignment="Right"/>

@@ -1,14 +1,21 @@
 using Common.WPF.ViewModels;
 using System.IO;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace RomForge.ViewModels._3DS;
 
 public class FileItemViewModel : ViewModelBase
 {
-    private int _progress;
+    private BitmapSource? _icon;
+    private string _titleId;    
+    private string _shortDescription = string.Empty;
+    private string _publisher = string.Empty;
+    private string _productCode = string.Empty;
     private string _status = string.Empty;
     private string _selectedTargetFormat = string.Empty;
+    private int _progress;
+    private bool _crypto = false;
 
     public int No { get; set; }
 
@@ -49,6 +56,46 @@ public class FileItemViewModel : ViewModelBase
     {
         get => _status;
         set { _status = value; OnPropertyChanged(); OnPropertyChanged(nameof(StatusColor)); }
+    }
+
+    public BitmapSource? Icon
+    {
+        get => _icon;
+        set { _icon = value; OnPropertyChanged(); }
+    }
+
+    public string TitleId
+    {
+        get => _titleId;
+        set { _titleId = value; OnPropertyChanged(); }
+    }
+
+    public string ShortDescription
+    {
+        get => string.IsNullOrEmpty(_shortDescription) ? TitleId : _shortDescription;
+        set { _shortDescription = value; OnPropertyChanged(); }
+    }
+
+    public string Publisher
+    {
+        get => _publisher;
+        set { _publisher = value; OnPropertyChanged(); }
+    }
+
+    public string ProductCode
+    {
+        get => _productCode;
+        set
+        {
+            _productCode = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool Crypto
+    {
+        get => _crypto;
+        set { _crypto = value; OnPropertyChanged(); }
     }
 
     public Brush StatusColor => Status switch

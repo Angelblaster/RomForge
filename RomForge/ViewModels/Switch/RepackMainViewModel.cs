@@ -136,7 +136,7 @@ namespace NSW.M1.ViewModels
                     req.Language = Context?.ForcedLanguage ?? default;
                     req.UserMetadata = Context?.Metadata;
                     req.OverrideKeyGeneration = 1;
-                    req.TargetIdOffset = 2;
+                    //req.TargetIdOffset = 2;
                     string finalResult = NspBuildService.Run(req, mode, progress, (msg, lvl) => Log(msg, lvl), token);
                     Log($"\n✓ {mode} 완료! 총 소요: {_totalSw.Elapsed:mm\\:ss}", LogLevel.Ok);
                     MessageBoxHelper.ShowInfo($"{mode} 작업이 완료되었습니다!\n{finalResult}");

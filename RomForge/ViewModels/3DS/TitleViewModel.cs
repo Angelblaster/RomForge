@@ -1,16 +1,17 @@
 ﻿using _3DS.Core.Enums;
 using _3DS.Core.Models;
+using Common.WPF.ViewModels;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace RomForge.ViewModels._3DS;
 
-public class TitleViewModel : System.ComponentModel.INotifyPropertyChanged
+public class TitleViewModel : ViewModelBase
 {
     private BitmapSource? _icon;
-    private string _shortDescription = string.Empty;
-    private string _publisher = string.Empty;
     private string _filePath = string.Empty;
+    private string _shortDescription = string.Empty;
+    private string _publisher = string.Empty;    
     private string _productCode = string.Empty;
     private string _region = string.Empty;
     private bool _crypto = false;
@@ -102,8 +103,6 @@ public class TitleViewModel : System.ComponentModel.INotifyPropertyChanged
         _ => new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x6A)),
     };
 
-    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
-
     private static string FormatSize(ulong bytes)
     {
         if (bytes == 0)
@@ -155,6 +154,4 @@ public class TitleViewModel : System.ComponentModel.INotifyPropertyChanged
             _ => "알 수 없음"
         };
     }
-
-    private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
 }

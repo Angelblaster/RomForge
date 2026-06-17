@@ -9,7 +9,7 @@
         xmlns:vm="clr-namespace:RomForge.ViewModels"
         xmlns:helpers="clr-namespace:RomForge.Helpers"
         Title="{Binding AppVersion}"
-        Height="770" Width="900"
+        Height="700" Width="900"
         MinHeight="480" MinWidth="900"
         Background="#1E1E1E"
         AllowDrop="True"

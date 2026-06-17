@@ -1,10 +1,9 @@
-﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
+﻿using Common.WPF.ViewModels;
 using System.Windows.Media;
 
 namespace RomForge.ViewModels._3DS;
 
-public class InstallFileItem : INotifyPropertyChanged
+public class InstallFileItem : ViewModelBase
 {
     private double _progress;
     private int _no;
@@ -32,8 +31,4 @@ public class InstallFileItem : INotifyPropertyChanged
         get => _progress;
         set { _progress = value; OnPropertyChanged(); }
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    protected void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

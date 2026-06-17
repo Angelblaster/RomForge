@@ -7,18 +7,15 @@
              mc:Ignorable="d" 
              d:DesignHeight="580" d:DesignWidth="800">
     <Grid>
-        <Grid Grid.Row="0" Margin="15,5,15,15">
+        <Grid Grid.Row="0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="300"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TabControl Grid.Row="0" Margin="0,0,0,16" SelectedIndex="0">
+            <TabControl Grid.Row="0" Margin="0,0,0,5" SelectedIndex="0">
                 <TabItem>
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -39,49 +36,52 @@
                 </TabItem>
             </TabControl>
 
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-                <TextBlock Text="[한글패치] or [xdelta 폴더]" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
-            </StackPanel>
-
-            <Grid Grid.Row="2" Margin="0,0,0,16">
+            <Grid Grid.Row="1" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Margin="0,0,8,0" Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="1" CornerRadius="6" AllowDrop="True" PreviewDragEnter="TxtPatch_DragEnter" PreviewDragOver="TxtPatch_DragOver" PreviewDrop="TxtPatch_Drop">
-                    <Grid>
-                        <TextBox x:Name="txtPatch" Text="{Binding PatchPath, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" BorderThickness="0" Foreground="#DCDCDC" CaretBrush="#DCDCDC" FontSize="11" VerticalContentAlignment="Center" Padding="10,0" Height="36"/>
-                        <TextBlock x:Name="patchHint" Text="[한글패치] or [xdelta 폴더]를 드래그&amp;드롭하세요" Visibility="{Binding PatchHintVisibility}" Foreground="#50FFFFFF" FontSize="11" VerticalAlignment="Center" Margin="12,0,0,0" IsHitTestVisible="False"/>
-                    </Grid>
-                </Border>
-
-                <Button Grid.Column="1" x:Name="btnOpenPatchFolder" Width="30" Height="30" Padding="0" BorderThickness="1" Style="{StaticResource GrayButton}" Command="{Binding BrowsePatchCommand}">
-                    <Image Source="/Assets/Images/AddFolder.png" Width="30" Height="30" RenderOptions.BitmapScalingMode="HighQuality"/>
-                </Button>
-            </Grid>
-
-            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,8">
-                <TextBlock Text="작업 폴더" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
-            </StackPanel>
-
-            <Grid Grid.Row="4" Margin="0,0,0,16">
-                <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Border Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="1" CornerRadius="6" Margin="0,0,8,0">
-                    <Grid>
-                        <TextBox x:Name="txtOutput" Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" BorderThickness="0" Foreground="#DCDCDC" CaretBrush="#DCDCDC" FontSize="11" VerticalContentAlignment="Center" Padding="10,0" Height="36"/>
-                        <TextBlock x:Name="outputHint" Text="작업 폴더를 선택하세요" Visibility="{Binding OutputHintVisibility}" Foreground="#50FFFFFF" FontSize="11" VerticalAlignment="Center" Margin="12,0,0,0" IsHitTestVisible="False"/>
-                    </Grid>
 
-                </Border>
-                <Button Grid.Column="1" x:Name="btnOpenWorkSpaceFolder" Width="30" Height="30" Padding="0" BorderThickness="1" Style="{StaticResource GrayButton}" Command="{Binding BrowseOutputCommand}">
-                    <Image Source="/Assets/Images/AddFolder.png" Width="30" Height="30" RenderOptions.BitmapScalingMode="HighQuality"/>
-                </Button>
+                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Text="[한글패치] or [xdelta 폴더]" FontSize="12" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,4"/>
+                    <Grid Height="36">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Margin="0,0,4,0" Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="1" CornerRadius="6" AllowDrop="True" PreviewDragEnter="TxtPatch_DragEnter" PreviewDragOver="TxtPatch_DragOver" PreviewDrop="TxtPatch_Drop">
+                            <Grid>
+                                <TextBox x:Name="txtPatch" Text="{Binding PatchPath, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" BorderThickness="0" Foreground="#DCDCDC" FontSize="11" VerticalContentAlignment="Center" Padding="10,0"/>
+                                <TextBlock Text="[한글패치] or [xdelta 폴더]를 드래그&amp;드롭하세요" Visibility="{Binding PatchHintVisibility}" Foreground="#50FFFFFF" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
+                            </Grid>
+                        </Border>
+                        <Button Grid.Column="1" x:Name="btnOpenPatchFolder" Width="30" Height="30" Padding="0" BorderThickness="1" Style="{StaticResource GrayButton}" Command="{Binding BrowsePatchCommand}">
+                            <Image Source="/Assets/Images/AddFolder.png" Width="30" Height="30" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                    <TextBlock Text="작업 폴더" FontSize="12" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,4"/>
+                    <Grid Height="36">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Margin="0,0,4,0" Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="1" CornerRadius="6">
+                            <Grid>
+                                <TextBox x:Name="txtOutput" Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" BorderThickness="0" Foreground="#DCDCDC" FontSize="11" VerticalContentAlignment="Center" Padding="10,0"/>
+                                <TextBlock Text="작업 폴더를 선택하세요" Visibility="{Binding OutputHintVisibility}" Foreground="#50FFFFFF" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False"/>
+                            </Grid>
+                        </Border>
+                        <Button Grid.Column="1" x:Name="btnOpenWorkSpaceFolder" Width="30" Height="30" Padding="0" BorderThickness="1" Style="{StaticResource GrayButton}" Command="{Binding BrowseOutputCommand}">
+                            <Image Source="/Assets/Images/AddFolder.png" Width="30" Height="30" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Button>
+                    </Grid>
+                </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="5" Margin="0,0,0,10">
+            <Grid Grid.Row="2" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
@@ -92,7 +92,7 @@
                 <Button Grid.Column="2" Content="언팩 + 리팩 (Full)" Click="BtnStart_Click" Margin="5,0,0,0"/>
             </Grid>
 
-            <Grid Grid.Row="6" Margin="0,0,0,10" Visibility="{Binding IsWorking, Converter={StaticResource BoolToVisibility}}">
+            <Grid Grid.Row="3" Margin="0,0,0,10" Visibility="{Binding IsWorking, Converter={StaticResource BoolToVisibility}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>

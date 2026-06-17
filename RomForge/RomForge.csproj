@@ -12,10 +12,10 @@
     <RootNamespace>RomForge</RootNamespace>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701;1702;CA1416</NoWarn>
+    <NoWarn>1701;1702;CS8618;CA1416</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <NoWarn>1701;1702;CA1416</NoWarn>
+    <NoWarn>1701;1702;CS8618;CA1416</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Assets\Images\3DS.png" />
@@ -25,11 +25,13 @@
     <None Remove="Assets\Images\FBNeo.png" />
     <None Remove="Assets\Images\Gift.png" />
     <None Remove="Assets\Images\Info.png" />
+    <None Remove="Assets\Images\Input.png" />
     <None Remove="Assets\Images\Install.png" />
     <None Remove="Assets\Images\Installer.png" />
     <None Remove="Assets\Images\Loading.png" />
     <None Remove="Assets\Images\Merge.png" />
     <None Remove="Assets\Images\Metadata.png" />
+    <None Remove="Assets\Images\Output.png" />
     <None Remove="Assets\Images\Package.png" />
     <None Remove="Assets\Images\SdCard.png" />
     <None Remove="Assets\Images\Seed.png" />
@@ -47,6 +49,7 @@
     <Resource Include="Assets\Images\Convert.png" />
     <Resource Include="Assets\Images\DLC.png" />
     <Resource Include="Assets\Images\Gift.png" />
+    <Resource Include="Assets\Images\Input.png" />
     <Resource Include="Assets\Images\Install.png" />
     <Resource Include="Assets\Images\Installer.png" />
   </ItemGroup>
@@ -94,6 +97,7 @@
     <Resource Include="Assets\Images\Mame.png" />
     <Resource Include="Assets\Images\Merge.png" />
     <Resource Include="Assets\Images\Metadata.png" />
+    <Resource Include="Assets\Images\Output.png" />
     <Resource Include="Assets\Images\Package.png" />
     <Resource Include="Assets\Images\Patch.png" />
     <Resource Include="Assets\Images\Progress.png" />
