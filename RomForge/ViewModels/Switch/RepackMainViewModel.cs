@@ -106,9 +106,14 @@ namespace RomForge.ViewModels.Switch
                 return;
             }
 
-            if (mode != BuildMode.RebuildOnly && Directory.Exists(Path.Combine(req.OutputDir, "unpacked")) &&
-                !MessageBoxHelper.ShowQuestion("기존 언팩 데이터를 삭제하고 새로 진행할까요?"))
-                return;
+            bool isRebuild = (mode == BuildMode.RebuildOnly);
+            string unpackedPath = Path.Combine(req.OutputDir, "unpacked");
+
+            if (!isRebuild && Directory.Exists(unpackedPath))
+            {
+                if (!MessageBoxHelper.ShowQuestion("기존 언팩 데이터를 삭제하고 새로 진행할까요?"))
+                    return;
+            }
 
             _totalSw.Restart();
             _currentMode = mode;

@@ -83,5 +83,4 @@ public static class PatchPackageService
             Entries = entries
         };
     }
-
 }

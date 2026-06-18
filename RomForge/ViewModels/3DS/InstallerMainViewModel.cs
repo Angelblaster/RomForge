@@ -260,8 +260,7 @@ public class InstallerMainViewModel : ToolTabViewModel
             if (Directory.Exists(titleRoot))
             {
                 AppendLog($"이미 동일한 타이틀이 존재합니다. 경로: {titleRoot}", LogLevel.Info);
-                var result = MessageBoxHelper.ShowQuestion(
-                    $"{selected.ShortDescription} 이(가) 이미 설치되어 있습니다.\n재설치하시겠습니까?");
+                var result = MessageBoxHelper.ShowQuestion($"{selected.ShortDescription} 이(가) 이미 설치되어 있습니다.\n재설치하시겠습니까?");
 
                 if (!result)
                 {

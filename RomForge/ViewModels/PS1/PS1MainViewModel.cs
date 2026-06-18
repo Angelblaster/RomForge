@@ -38,7 +38,7 @@ public class PS1MainViewModel : ToolTabViewModel
 
     private void LogEntries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        var targetCollection = _subTabIndex == 0 ? ConverterVM.LogEntries;
+        var targetCollection = ConverterVM.LogEntries;
 
         if (sender != targetCollection)
             return;
@@ -83,7 +83,7 @@ public class PS1MainViewModel : ToolTabViewModel
 
     private void DoSync()
     {
-        var currentSource = _subTabIndex == 0 ? ConverterVM.LogEntries;
+        var currentSource = ConverterVM.LogEntries;
 
         foreach (var item in currentSource)
             LogEntries.Add(item);

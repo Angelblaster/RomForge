@@ -1,6 +1,5 @@
 ﻿using Common.WPF.ViewModels;
 using RomForge.Core.Models.Patch;
-using RomForge.Core.Services.Patch;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
@@ -292,12 +291,8 @@ public class ArcadePatchMainViewModel : ToolTabViewModel
             UnmatchedPatches.Add(p);
     }
 
-    private sealed record PatchMatchResult(
-        string SourceFileName,
-        string FullPath,
-        PatchEntry? PatchEntry,
-        string? PatchFileName,
-        string? MismatchReason);
+
+    private sealed record PatchMatchResult(string SourceFileName, string FullPath, PatchEntry? PatchEntry, string? PatchFileName, string? MismatchReason);
 
     private sealed record MatchPlan(List<PatchEntry> PatchEntries, List<PatchMatchResult> Results);
 
@@ -310,7 +305,7 @@ public class ArcadePatchMainViewModel : ToolTabViewModel
             .Select(d =>
             {
                 token.ThrowIfCancellationRequested();
-                return PatchPackageService.ParseDatFile(d.FileName, d.Content);
+                return RomForge.Core.Services.Patch.PatchPackageService.ParseDatFile(d.FileName, d.Content);
             })];
     }
 
@@ -320,10 +315,30 @@ public class ArcadePatchMainViewModel : ToolTabViewModel
 
         var sourceEntries = GetSourceEntries(sourcePath);
         var patchEntries = GetPatchEntries(patchPath);
-        var usedPatches = new HashSet<PatchEntry>();
         var results = new List<PatchMatchResult>(sourceEntries.Count);
-
         var allowedPatchNames = package?.Entries.Select(e => e.PatchBaseName).ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
+        var sortedPatches = patchEntries.OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+        var usedPatches = new HashSet<PatchEntry>();
+        var extensionBuckets = new Dictionary<string, Queue<PatchEntry>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var p in sortedPatches)
+        {
+            bool eligibleForExtensionMatch = package == null ||
+                !allowedPatchNames.Contains(p.FileNameWithoutExtension, StringComparer.OrdinalIgnoreCase);
+
+            if (!eligibleForExtensionMatch)
+                continue;
+
+            if (!extensionBuckets.TryGetValue(p.FileNameWithoutExtension, out var queue))
+            {
+                queue = new Queue<PatchEntry>();
+                extensionBuckets[p.FileNameWithoutExtension] = queue;
+            }
+
+            queue.Enqueue(p);
+        }
+
+        var datCandidates = new LinkedList<PatchEntry>(sortedPatches);
 
         foreach (var (fileName, fullPath, crc) in sourceEntries)
         {
@@ -332,38 +347,23 @@ public class ArcadePatchMainViewModel : ToolTabViewModel
             PatchEntry? matched = null;
             string? mismatchReason = null;
 
-            var datEntry = package?.Entries.FirstOrDefault(
-                e => string.Equals(e.SourceFileName, fileName, StringComparison.OrdinalIgnoreCase));
+            var datEntry = package?.Entries.FirstOrDefault(e => string.Equals(e.SourceFileName, fileName, StringComparison.OrdinalIgnoreCase));
 
             if (datEntry is not null)
             {
                 if (string.Equals(crc, datEntry.Crc, StringComparison.OrdinalIgnoreCase))
                 {
-                    matched = patchEntries
-                        .Where(p => !usedPatches.Contains(p) &&
-                            p.FileNameWithoutExtension.Contains(datEntry.PatchBaseName, StringComparison.OrdinalIgnoreCase))
-                        .OrderBy(p => p.DisplayName)
-                        .FirstOrDefault();
-
-                    mismatchReason = matched is null
-                        ? $"마스터 데이터에 등록된 패치({datEntry.PatchBaseName}.ips)를 찾을 수 없습니다."
-                        : "CRC 일치";
+                    matched = FindAndRemoveDatMatch(datCandidates, usedPatches, datEntry.PatchBaseName);
+                    mismatchReason = matched is null ? $"마스터 데이터에 등록된 패치({datEntry.PatchBaseName}.ips)를 찾을 수 없습니다." : "CRC 일치";
                 }
                 else
-                {
                     mismatchReason = "CRC 불일치";
-                }
             }
             else
             {
                 var ext = Path.GetExtension(fileName).TrimStart('.').ToLower();
 
-                matched = patchEntries
-                    .Where(p => !usedPatches.Contains(p) &&
-                        (package == null || !allowedPatchNames.Contains(p.FileNameWithoutExtension, StringComparer.OrdinalIgnoreCase)) &&
-                        p.FileNameWithoutExtension.Equals(ext, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(p => p.DisplayName)
-                    .FirstOrDefault();
+                matched = DequeueUnused(extensionBuckets, ext, usedPatches);
             }
 
             if (matched is not null)
@@ -373,6 +373,46 @@ public class ArcadePatchMainViewModel : ToolTabViewModel
         }
 
         return new MatchPlan(patchEntries, results);
+    }
+
+    private static PatchEntry? FindAndRemoveDatMatch(LinkedList<PatchEntry> candidates, HashSet<PatchEntry> usedPatches, string patchBaseName)
+    {
+        var node = candidates.First;
+
+        while (node is not null)
+        {
+            var next = node.Next;
+
+            if (usedPatches.Contains(node.Value))
+                candidates.Remove(node);
+            else if (node.Value.FileNameWithoutExtension.Contains(patchBaseName, StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Remove(node);
+                return node.Value;
+            }
+
+            node = next;
+        }
+
+        return null;
+    }
+
+    private static PatchEntry? DequeueUnused(Dictionary<string, Queue<PatchEntry>> buckets, string extension, HashSet<PatchEntry> usedPatches)
+    {
+        var key = buckets.Keys.FirstOrDefault(k => k.Contains(extension, StringComparison.OrdinalIgnoreCase));
+
+        if (key is null || !buckets.TryGetValue(key, out var queue))
+            return null;
+
+        while (queue.Count > 0)
+        {
+            var candidate = queue.Dequeue();
+
+            if (!usedPatches.Contains(candidate))
+                return candidate;
+        }
+
+        return null;
     }
 
     private static List<(string FileName, string FullPath, string Crc)> GetSourceEntries(string zipPath)
