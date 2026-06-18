@@ -89,7 +89,7 @@ public class ConverterMainViewModel : ToolTabViewModel
             var result = await Util.ParseFile(path);
             var vm = new FileItemViewModel(path)
             {
-                TitleId = result.Title.TitleId,                
+                TitleId = result.Title!.TitleId,                
                 ProductCode = result.ProductCode,
                 ShortDescription = result.ShortDescription,
                 Publisher = result.Publisher,

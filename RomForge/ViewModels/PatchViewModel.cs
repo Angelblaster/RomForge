@@ -3,6 +3,8 @@ using Common;
 using Common.WPF.ViewModels;
 using DolphinTool.Core.Services;
 using Patch.Core;
+using RomForge.Core.Models;
+using RomForge.Core.Models.Patch;
 using RomForge.Core.Services;
 using RomForge.Helpers;
 using RomForge.Models;
@@ -192,8 +194,10 @@ public class PatchViewModel : ToolTabViewModel
     {
         var matched = ArcadeVM.MatchItems.Where(x => x.IsMatched).ToList();
 
-        if (matched.Count == 0) 
+        if (matched.Count == 0 || ArcadeVM.SourcePath is null)
             return;
+
+        string outputDir = Path.Combine(Path.GetDirectoryName(ArcadeVM.SourcePath)!, "output");
 
         Log("아케이드 패치 준비 중...", LogLevel.Info);
 
@@ -206,8 +210,17 @@ public class PatchViewModel : ToolTabViewModel
             {
                 try
                 {
+                    // SourcePath는 "zip경로|엔트리경로" 합성 문자열이므로 분해해서 SourceEntry로 구성
+                    var parts = item.SourcePath.Split('|', 2);
+                    var sourceEntry = new SourceEntry
+                    {
+                        DisplayName = item.SourceFileName,
+                        ZipPath = parts[0],
+                        EntryPath = parts.Length > 1 ? parts[1] : string.Empty
+                    };
+
                     await PatchService.ApplyAsync(
-                        item.SourcePath, item.PatchPath!,
+                        sourceEntry, item.PatchEntry!, outputDir,
                         new Progress<ProgressInfo>(p =>
                         {
                             item.Progress = p.Percent;
@@ -216,15 +229,15 @@ public class PatchViewModel : ToolTabViewModel
                         null, token);
 
                     item.Progress = 100;
-                    Log($"패치 완료: {Path.GetFileName(item.SourcePath)}", LogLevel.Ok);
+                    Log($"패치 완료: {item.SourceFileName}", LogLevel.Ok);
                 }
                 catch (OperationCanceledException)
                 {
-                    Log($"패치 취소: {Path.GetFileName(item.SourcePath)}", LogLevel.Error);
+                    Log($"패치 취소: {item.SourceFileName}", LogLevel.Error);
                 }
                 catch (Exception ex)
                 {
-                    Log($"패치 실패: {Path.GetFileName(item.SourcePath)} - {ex.Message}", LogLevel.Error);
+                    Log($"패치 실패: {item.SourceFileName} - {ex.Message}", LogLevel.Error);
                 }
                 finally
                 {

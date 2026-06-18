@@ -1,5 +1,5 @@
 ﻿using Common.WPF.ViewModels;
-using RomForge.Core.Models;
+using RomForge.Core.Models.Patch;
 
 namespace RomForge.ViewModels;
 
@@ -32,6 +32,13 @@ public class ArcadeMatchItem : ViewModelBase
     {
         get => _progress;
         set { _progress = value; OnPropertyChanged(); }
+    }
+
+    private string? _mismatchReason;
+    public string? MismatchReason
+    {
+        get => _mismatchReason;
+        set { _mismatchReason = value; OnPropertyChanged(); }
     }
 
     public bool IsMatched => PatchFileName is not null;

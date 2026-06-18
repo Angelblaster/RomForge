@@ -1,6 +1,6 @@
 using Common;
 using Patch.Core;
-using RomForge.Core.Models;
+using RomForge.Core.Models.Patch;
 using System.IO;
 using System.IO.Compression;
 

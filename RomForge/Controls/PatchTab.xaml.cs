@@ -1,5 +1,8 @@
 ﻿using Microsoft.Win32;
+using RomForge.Core.Models;
+using RomForge.Core.Models.Patch;
 using RomForge.ViewModels;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -97,6 +100,13 @@ public partial class PatchTab : UserControl
         if (border.Tag is not ArcadeMatchItem item) return;
         if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0) return;
 
-        ViewModel.PatchVM.ArcadeVM.ManualMatch(item, files[0]);
+        string path = files[0];
+        var patchEntry = new PatchEntry
+        {
+            DisplayName = Path.GetFileName(path),
+            EntryPath = path
+        };
+
+        ViewModel.PatchVM.ArcadeVM.ManualMatch(item, patchEntry);
     }
 }

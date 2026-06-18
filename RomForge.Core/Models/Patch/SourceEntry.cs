@@ -1,4 +1,4 @@
-﻿namespace RomForge.Core.Models;
+﻿namespace RomForge.Core.Models.Patch;
 
 public class SourceEntry
 {

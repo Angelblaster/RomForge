@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace RomForge.Core.Models;
+namespace RomForge.Core.Models.Patch;
 
 public class PatchEntry
 {
