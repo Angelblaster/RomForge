@@ -11,6 +11,7 @@ using RomForge.Models;
 using RomZip.Core.Enums;
 using RomZip.Core.Services;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Input;
 
@@ -58,8 +59,10 @@ public class PatchViewModel : ToolTabViewModel
         {
             switch (SelectedTabIndex)
             {
-                case 0: await RunNormalAsync(_cts.Token); break;
-                case 1: await RunArcadeAsync(_cts.Token); break;
+                case 0: await RunNormalAsync(_cts.Token); 
+                    break;
+                case 1: await RunArcadeAsync(_cts.Token); 
+                    break;
             }
         }
     }
@@ -69,7 +72,7 @@ public class PatchViewModel : ToolTabViewModel
         if (NormalVM.SourcePath is null || NormalVM.PatchPath is null) return;
 
         NormalVM.Progress = 0;
-        Log("패치 준비 중...", LogLevel.Info);
+        Log("패치 시작", LogLevel.Info);
 
         try
         {
@@ -90,6 +93,7 @@ public class PatchViewModel : ToolTabViewModel
                     case RomFormat.Bin:
                         {
                             string outputBinPath = Path.Combine(outputDir, Path.GetFileName(NormalVM.SourcePath));
+
                             await File.WriteAllBytesAsync(outputBinPath, result, ct);
 
                             string? cuePath = Directory.GetFiles(Path.GetDirectoryName(NormalVM.SourcePath)!, "*.cue")
@@ -103,11 +107,14 @@ public class PatchViewModel : ToolTabViewModel
                             }
 
                             string outputCuePath = Path.Combine(outputDir, Path.GetFileName(cuePath));
+
                             File.Copy(cuePath, outputCuePath, true);
 
                             FileConverter converter = new();
+
                             converter.LogMessage += (_, e) => Log(e.Message, e.Level);
                             converter.ProgressChanged += (_, e) => NormalVM.Progress = e.Progress;
+
                             var chdResult = await converter.ConvertFileAsync(outputCuePath, ct);
 
                             if (!chdResult.Success)
@@ -118,16 +125,20 @@ public class PatchViewModel : ToolTabViewModel
 
                             File.Delete(outputBinPath);
                             File.Delete(outputCuePath);
+
                             break;
                         }
                     case RomFormat.Iso:
                         {
                             string outputFilePath = Path.Combine(outputDir, Path.GetFileName(NormalVM.SourcePath));
+
                             await File.WriteAllBytesAsync(outputFilePath, result, ct);
 
                             FileConverter converter = new();
+
                             converter.LogMessage += (_, e) => Log(e.Message, e.Level);
                             converter.ProgressChanged += (_, e) => NormalVM.Progress = e.Progress;
+
                             var chdResult = await converter.ConvertFileAsync(outputFilePath, ct);
 
                             if (!chdResult.Success)
@@ -137,6 +148,7 @@ public class PatchViewModel : ToolTabViewModel
                             }
 
                             File.Delete(outputFilePath);
+
                             break;
                         }
                     case RomFormat.Gcm:
@@ -144,27 +156,34 @@ public class PatchViewModel : ToolTabViewModel
                     case RomFormat.Wbfs:
                         {
                             string outputFilePath = Path.Combine(outputDir, Path.GetFileName(NormalVM.SourcePath));
+
                             await File.WriteAllBytesAsync(outputFilePath, result, ct);
 
                             DolphinService dolphin = new();
+
                             dolphin.LogMessage += (_, e) => Log(e.Message, e.Level);
                             dolphin.ProgressChanged += (_, e) => NormalVM.Progress = e.Progress;
+
                             await dolphin.ConvertFileAsync(outputFilePath, detected.Format.ToString(), detected.OutputExtension, _config.Dolphin.CompressLevel, ct);
 
                             File.Delete(outputFilePath);
+
                             break;
                         }
                     case RomFormat.Unknown:
                         {
                             string zipPath = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(NormalVM.SourcePath) + ".zip");
+
                             await Task.Run(() =>
                             {
                                 using var zipStream = new FileStream(zipPath, FileMode.Create);
                                 using var archive = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create);
                                 var entry = archive.CreateEntry(Path.GetFileName(NormalVM.SourcePath));
                                 using var entryStream = entry.Open();
+
                                 entryStream.Write(result, 0, result.Length);
                             }, ct);
+
                             break;
                         }
                 }
@@ -172,11 +191,15 @@ public class PatchViewModel : ToolTabViewModel
             else
             {
                 string outputPath = Path.Combine(outputDir, Path.GetFileName(NormalVM.SourcePath));
+
                 await File.WriteAllBytesAsync(outputPath, result, ct);
             }
 
             NormalVM.Progress = 100;
             Log($"패치 완료", LogLevel.Ok);
+
+            if (Directory.Exists(outputDir))
+                Process.Start("explorer.exe", $"\"{outputDir}\"");
         }
         catch (OperationCanceledException)
         {
@@ -199,59 +222,63 @@ public class PatchViewModel : ToolTabViewModel
 
         string outputDir = Path.Combine(Path.GetDirectoryName(ArcadeVM.SourcePath)!, "output");
 
-        Log("아케이드 패치 준비 중...", LogLevel.Info);
+        Log("패치 시작...", LogLevel.Info);
 
         foreach (var item in matched)
+        {
+            if (ct.IsCancellationRequested)
+                break;
+
             item.Progress = 0;
 
-        await Parallel.ForEachAsync(matched,
-            new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = ct },
-            async (item, token) =>
+            try
             {
-                try
+                var parts = item.SourcePath.Split('|', 2);
+                var sourceEntry = new SourceEntry
                 {
-                    // SourcePath는 "zip경로|엔트리경로" 합성 문자열이므로 분해해서 SourceEntry로 구성
-                    var parts = item.SourcePath.Split('|', 2);
-                    var sourceEntry = new SourceEntry
+                    DisplayName = item.SourceFileName,
+                    ZipPath = parts[0],
+                    EntryPath = parts.Length > 1 ? parts[1] : string.Empty
+                };
+
+                await PatchService.ApplyAsync( sourceEntry, item.PatchEntry!, outputDir,
+                    new Progress<ProgressInfo>(p =>
                     {
-                        DisplayName = item.SourceFileName,
-                        ZipPath = parts[0],
-                        EntryPath = parts.Length > 1 ? parts[1] : string.Empty
-                    };
+                        item.Progress = p.Percent;
+                        ArcadeVM.UpdateSummary();
+                        ArcadeVM.UpdateTotalProgress();
+                    }),
+                    null, ct);
 
-                    await PatchService.ApplyAsync(
-                        sourceEntry, item.PatchEntry!, outputDir,
-                        new Progress<ProgressInfo>(p =>
-                        {
-                            item.Progress = p.Percent;
-                            ArcadeVM.UpdateTotalProgress();
-                        }),
-                        null, token);
+                item.Progress = 100;
+            }
+            catch (Exception ex)
+            {
+                Log($"패치 실패: {item.SourceFileName} - {ex.Message}", LogLevel.Error);
+            }
+            finally
+            {
+                ArcadeVM.UpdateSummary();
+                ArcadeVM.UpdateTotalProgress();
+            }
+        }
 
-                    item.Progress = 100;
-                    Log($"패치 완료: {item.SourceFileName}", LogLevel.Ok);
-                }
-                catch (OperationCanceledException)
-                {
-                    Log($"패치 취소: {item.SourceFileName}", LogLevel.Error);
-                }
-                catch (Exception ex)
-                {
-                    Log($"패치 실패: {item.SourceFileName} - {ex.Message}", LogLevel.Error);
-                }
-                finally
-                {
-                    ArcadeVM.UpdateTotalProgress();
-                }
-            });
+        await PatchService.FlushToDiskAsync(outputDir, ct);
+
+        Log("패치 완료", LogLevel.Ok);
+
+        if (Directory.Exists(outputDir))
+            Process.Start("explorer.exe", $"\"{outputDir}\"");
     }
 
     private void Clear()
     {
         switch (SelectedTabIndex)
         {
-            case 0: NormalVM.Clear(); break;
-            case 1: ArcadeVM.Clear(); break;
+            case 0: NormalVM.Clear(); 
+                break;
+            case 1: ArcadeVM.Clear();
+                break;
         }
     }
 

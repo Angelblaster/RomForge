@@ -1,4 +1,5 @@
 ﻿using Common.WPF.ViewModels;
+using System.IO;
 
 namespace RomForge.ViewModels;
 
@@ -40,9 +41,9 @@ public class NormalPatchViewModel : ToolTabViewModel
         }
     }
 
-    public string SourceLabel => SourcePath ?? "원본 파일을 드래그하거나 클릭하세요";
+    public string SourceLabel => Path.GetFileName(SourcePath) ?? "원본 파일을 드래그하거나 클릭하세요";
 
-    public string PatchLabel => PatchPath ?? "패치 파일을 드래그하거나 클릭하세요";
+    public string PatchLabel => Path.GetFileName(PatchPath) ?? "패치 파일을 드래그하거나 클릭하세요";
 
     private int _progress;
     public int Progress
