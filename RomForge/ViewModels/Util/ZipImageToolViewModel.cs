@@ -3,6 +3,7 @@ using Common.WPF.ViewModels;
 using Ionic.Zlib;
 using NSW.WPF.UI;
 using PickPack.Disk;
+using PickPack.Disk.ETC;
 using RomForge.Helpers;
 using RomForge.Models;
 using System.Collections.ObjectModel;

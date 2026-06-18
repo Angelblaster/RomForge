@@ -3,81 +3,103 @@ using Patch.Core;
 using RomForge.Core.Models.Patch;
 using System.IO;
 using System.IO.Compression;
-using System.Collections.Concurrent;
 
 namespace RomForge.Core.Services;
 
 public static class PatchService
 {
-    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte[]>> _memoryCache = new();
-
-    public static async Task ApplyAsync(SourceEntry source, PatchEntry patch, string outputDir, IProgress<ProgressInfo>? progress = null, Action<string, LogLevel>? log = null, CancellationToken ct = default)
+    public static async Task ApplyPatchedZipAsync(string sourceZipPath, string outputZipPath, IReadOnlyDictionary<string, PatchEntry> patchesByEntryName, IProgress<EntryPatchProgress>? progress = null, Action<string, LogLevel>? log = null, CancellationToken ct = default)
     {
-        var sourceBytes = source.IsZipEntry
-            ? await ReadZipEntryAsync(source.ZipPath!, source.EntryPath, ct)
-            : await File.ReadAllBytesAsync(source.EntryPath, ct);
+        var outputDir = Path.GetDirectoryName(outputZipPath);
 
-        var patchBytes = patch.IsZipEntry
-            ? await ReadZipEntryAsync(patch.ZipPath!, patch.EntryPath, ct)
-            : await File.ReadAllBytesAsync(patch.EntryPath, ct);
+        if (!string.IsNullOrEmpty(outputDir))
+            Directory.CreateDirectory(outputDir);
+
+        var openPatchZips = new Dictionary<string, ZipArchive>();
+
+        try
+        {
+            using var sourceZip = ZipFile.OpenRead(sourceZipPath);
+            using var outputStream = new FileStream(outputZipPath, FileMode.Create, FileAccess.Write);
+            using var outputZip = new ZipArchive(outputStream, ZipArchiveMode.Create);
+
+            foreach (var sourceEntry in sourceZip.Entries)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                if (string.IsNullOrEmpty(sourceEntry.Name))
+                {
+                    outputZip.CreateEntry(sourceEntry.FullName);
+                    continue;
+                }
+
+                if (patchesByEntryName.TryGetValue(sourceEntry.FullName, out var patchEntry))
+                    await WritePatchedEntryAsync(sourceEntry, patchEntry, outputZip, openPatchZips, progress, log, ct);
+                else
+                    await CopyEntryAsync(sourceEntry, outputZip, ct);
+            }
+        }
+        finally
+        {
+            foreach (var zip in openPatchZips.Values)
+                zip.Dispose();
+        }
+    }
+
+    private static async Task WritePatchedEntryAsync(ZipArchiveEntry sourceEntry, PatchEntry patchEntry, ZipArchive outputZip, Dictionary<string, ZipArchive> openPatchZips, IProgress<EntryPatchProgress>? progress, Action<string, LogLevel>? log, CancellationToken ct)
+    {
+        byte[] sourceBytes;
+
+        using (var srcStream = sourceEntry.Open())
+        using (var ms = new MemoryStream())
+        {
+            await srcStream.CopyToAsync(ms, ct);
+            sourceBytes = ms.ToArray();
+        }
+
+        var patchBytes = await ReadPatchBytesAsync(patchEntry, openPatchZips, ct);
 
         ct.ThrowIfCancellationRequested();
 
-        var result = await Task.Run(() =>
-            UniversalPatcher.ApplyPatch(sourceBytes, patchBytes,
-                p => progress?.Report(new ProgressInfo { Percent = (int)(p * 100) })), ct);
+        var resultBytes = await Task.Run(() =>
+            UniversalPatcher.ApplyPatch(sourceBytes, patchBytes, p =>
+                progress?.Report(new EntryPatchProgress { EntryName = sourceEntry.FullName, Percent = (int)(p * 100) })),
+            ct);
 
-        if (source.IsZipEntry)
-        {
-            var zipCache = _memoryCache.GetOrAdd(source.ZipPath!, _ => new ConcurrentDictionary<string, byte[]>());
-            zipCache[source.EntryPath] = result;
-        }
-        else
-        {
-            Directory.CreateDirectory(outputDir);
-            await File.WriteAllBytesAsync(Path.Combine(outputDir, source.DisplayName), result, ct);
-        }
+        var newEntry = outputZip.CreateEntry(sourceEntry.FullName, CompressionLevel.Optimal);
 
-        log?.Invoke($"[{source.DisplayName}] 메모리 캐싱 완료", LogLevel.Ok);
+        using (var destStream = newEntry.Open())
+            await destStream.WriteAsync(resultBytes, ct);
+
+        progress?.Report(new EntryPatchProgress { EntryName = sourceEntry.FullName, Percent = 100 });
     }
 
-    public static async Task FlushToDiskAsync(string outputDir, CancellationToken ct)
+    private static async Task CopyEntryAsync(ZipArchiveEntry sourceEntry, ZipArchive outputZip, CancellationToken ct)
     {
-        foreach (var zipGroup in _memoryCache)
-        {
-            string sourceZipPath = zipGroup.Key;
-            string outputZipPath = Path.Combine(outputDir, Path.GetFileName(sourceZipPath));
+        var newEntry = outputZip.CreateEntry(sourceEntry.FullName, CompressionLevel.Optimal);
 
-            Directory.CreateDirectory(outputDir);
+        using var srcStream = sourceEntry.Open();
+        using var destStream = newEntry.Open();
 
-            if (!File.Exists(outputZipPath)) 
-                File.Copy(sourceZipPath, outputZipPath);
-
-            using var zip = ZipFile.Open(outputZipPath, ZipArchiveMode.Update);
-
-            foreach (var entryData in zipGroup.Value)
-            {
-                var existing = zip.GetEntry(entryData.Key);
-
-                existing?.Delete();
-
-                var newEntry = zip.CreateEntry(entryData.Key, CompressionLevel.Optimal);
-                using var stream = newEntry.Open();
-
-                await stream.WriteAsync(entryData.Value, ct);
-            }
-        }
-
-        _memoryCache.Clear();
+        await srcStream.CopyToAsync(destStream, ct);
     }
 
-    private static async Task<byte[]> ReadZipEntryAsync(string zipPath, string entryPath, CancellationToken ct)
+    private static async Task<byte[]> ReadPatchBytesAsync(PatchEntry patchEntry, Dictionary<string, ZipArchive> openPatchZips, CancellationToken ct)
     {
-        using var zip = ZipFile.OpenRead(zipPath);
-        var entry = zip.GetEntry(entryPath) ?? throw new FileNotFoundException($"ZIP 없음: {entryPath}");
+        if (!patchEntry.IsZipEntry)
+            return await File.ReadAllBytesAsync(patchEntry.EntryPath, ct);
+
+        if (!openPatchZips.TryGetValue(patchEntry.ZipPath!, out var zip))
+        {
+            zip = ZipFile.OpenRead(patchEntry.ZipPath!);
+            openPatchZips[patchEntry.ZipPath!] = zip;
+        }
+
+        var entry = zip.GetEntry(patchEntry.EntryPath)
+            ?? throw new FileNotFoundException($"ZIP 없음: {patchEntry.EntryPath}");
+
         using var stream = entry.Open();
         using var ms = new MemoryStream();
-
         await stream.CopyToAsync(ms, ct);
 
         return ms.ToArray();

@@ -17,7 +17,7 @@ public partial class InstallMainTab : UserControl
     {
         InitializeComponent();
 
-        this.Loaded += MainTab_Loaded;
+        Loaded += MainTab_Loaded;
     }
 
     private void MainTab_Loaded(object sender, RoutedEventArgs e)

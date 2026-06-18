@@ -2,7 +2,7 @@
 
 public class PatchPackage
 {
-    public string DisplayName { get; init; } = string.Empty; // dat 안의 설명 텍스트 (예: 한국어 번역 v1.0)
-    public string DatFileName { get; init; } = string.Empty; // 예: 01-Korean_Translation.dat
+    public string DisplayName { get; init; } = string.Empty;
+    public string DatFileName { get; init; } = string.Empty;
     public List<PatchPackageEntry> Entries { get; init; } = [];
 }

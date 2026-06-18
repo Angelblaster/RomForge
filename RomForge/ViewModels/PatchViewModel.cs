@@ -72,7 +72,8 @@ public class PatchViewModel : ToolTabViewModel
         if (NormalVM.SourcePath is null || NormalVM.PatchPath is null) return;
 
         NormalVM.Progress = 0;
-        Log("패치 시작", LogLevel.Info);
+        Log($"패치 시작: {Path.GetFileName(NormalVM.SourcePath)}", LogLevel.Info);
+
 
         try
         {
@@ -85,7 +86,6 @@ public class PatchViewModel : ToolTabViewModel
 
             if (NormalVM.AutoCompress)
             {
-                Log("압축 중...", LogLevel.Info);
                 var detected = FormatDetector.Detect(NormalVM.SourcePath);
 
                 switch (detected.Format)
@@ -196,7 +196,7 @@ public class PatchViewModel : ToolTabViewModel
             }
 
             NormalVM.Progress = 100;
-            Log($"패치 완료", LogLevel.Ok);
+            Log($"{Path.GetFileName(NormalVM.SourcePath)} 패치 완료.", LogLevel.Ok);
 
             if (Directory.Exists(outputDir))
                 Process.Start("explorer.exe", $"\"{outputDir}\"");
@@ -221,54 +221,64 @@ public class PatchViewModel : ToolTabViewModel
             return;
 
         string outputDir = Path.Combine(Path.GetDirectoryName(ArcadeVM.SourcePath)!, "output");
+        string outputZipPath = Path.Combine(outputDir, Path.GetFileName(ArcadeVM.SourcePath));
 
-        Log("패치 시작...", LogLevel.Info);
+        Log($"패치 시작: {Path.GetFileName(ArcadeVM.SourcePath)}", LogLevel.Info);
+
+        var itemsByEntryName = new Dictionary<string, ArcadeMatchItem>();
+        var patchesByEntryName = new Dictionary<string, PatchEntry>();
 
         foreach (var item in matched)
         {
-            if (ct.IsCancellationRequested)
-                break;
+            var entryName = item.SourcePath.Split('|', 2)[1];
 
+            itemsByEntryName[entryName] = item;
+            patchesByEntryName[entryName] = item.PatchEntry!;
             item.Progress = 0;
+        }
 
-            try
+        var progressReporter = new Progress<EntryPatchProgress>(p =>
+        {
+            if (itemsByEntryName.TryGetValue(p.EntryName, out var item))
             {
-                var parts = item.SourcePath.Split('|', 2);
-                var sourceEntry = new SourceEntry
-                {
-                    DisplayName = item.SourceFileName,
-                    ZipPath = parts[0],
-                    EntryPath = parts.Length > 1 ? parts[1] : string.Empty
-                };
-
-                await PatchService.ApplyAsync( sourceEntry, item.PatchEntry!, outputDir,
-                    new Progress<ProgressInfo>(p =>
-                    {
-                        item.Progress = p.Percent;
-                        ArcadeVM.UpdateSummary();
-                        ArcadeVM.UpdateTotalProgress();
-                    }),
-                    null, ct);
-
-                item.Progress = 100;
-            }
-            catch (Exception ex)
-            {
-                Log($"패치 실패: {item.SourceFileName} - {ex.Message}", LogLevel.Error);
-            }
-            finally
-            {
+                item.Progress = p.Percent;
                 ArcadeVM.UpdateSummary();
                 ArcadeVM.UpdateTotalProgress();
             }
+        });
+
+        try
+        {
+            await PatchService.ApplyPatchedZipAsync(ArcadeVM.SourcePath, outputZipPath, patchesByEntryName, progressReporter, Log, ct);
+
+            Log($"{Path.GetFileName(ArcadeVM.SourcePath)} 패치 완료.", LogLevel.Ok);
+
+            if (Directory.Exists(outputDir))
+                Process.Start("explorer.exe", $"\"{outputDir}\"");
         }
+        catch (OperationCanceledException)
+        {
+            TryDeleteIncompleteOutput(outputZipPath);
+            Log($"패치 취소: {Path.GetFileName(ArcadeVM.SourcePath)}", LogLevel.Error);
+        }
+        catch (Exception ex)
+        {
+            TryDeleteIncompleteOutput(outputZipPath);
+            Log($"패치 실패: {ex.Message}", LogLevel.Error);
+        }
+    }
 
-        await PatchService.FlushToDiskAsync(outputDir, ct);
-
-        Log("패치 완료", LogLevel.Ok);
-
-        if (Directory.Exists(outputDir))
-            Process.Start("explorer.exe", $"\"{outputDir}\"");
+    private void TryDeleteIncompleteOutput(string outputZipPath)
+    {
+        try
+        {
+            if (File.Exists(outputZipPath))
+                File.Delete(outputZipPath);
+        }
+        catch (Exception ex)
+        {
+            Log($"중단된 결과 파일 삭제 실패: {ex.Message} (수동으로 확인해주세요: {outputZipPath})", LogLevel.Error);
+        }
     }
 
     private void Clear()

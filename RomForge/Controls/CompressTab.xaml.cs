@@ -20,7 +20,7 @@ public partial class CompressTab : UserControl
     {
         InitializeComponent();
 
-        this.DataContextChanged += CompressTab_DataContextChanged;
+        DataContextChanged += CompressTab_DataContextChanged;
     }
 
     private void CompressTab_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)

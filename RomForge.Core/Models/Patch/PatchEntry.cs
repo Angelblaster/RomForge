@@ -9,6 +9,5 @@ public class PatchEntry
     public string EntryPath { get; init; } = string.Empty;
     public bool IsZipEntry => ZipPath is not null;
 
-    public string FileNameWithoutExtension =>
-        Path.GetFileNameWithoutExtension(DisplayName);
+    public string FileNameWithoutExtension => Path.GetFileNameWithoutExtension(DisplayName);
 }

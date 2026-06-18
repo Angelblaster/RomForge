@@ -13,17 +13,8 @@ public static class PatchMatcher
     {
         var sources = ExpandSource(sourcePath);
         var patches = ExpandPatch(patchPath);
-
-        var patchMap = patches.ToDictionary(
-            p => Path.GetFileNameWithoutExtension(p),
-            p => p,
-            StringComparer.OrdinalIgnoreCase);
-
-        var sourceMap = sources.ToDictionary(
-            s => Path.GetFileNameWithoutExtension(s),
-            s => s,
-            StringComparer.OrdinalIgnoreCase);
-
+        var patchMap = patches.ToDictionary(p => Path.GetFileNameWithoutExtension(p), p => p, StringComparer.OrdinalIgnoreCase);
+        var sourceMap = sources.ToDictionary(s => Path.GetFileNameWithoutExtension(s), s => s, StringComparer.OrdinalIgnoreCase);
         var pairs = new List<PatchPair>();
         var usedPatches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -67,21 +58,22 @@ public static class PatchMatcher
         return pairs;
     }
 
-    // 원본: 단일파일 → [파일], ZIP → [내부 엔트리 가상경로]
     private static List<string> ExpandSource(string path)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
+
         if (ext == ".zip")
         {
             using var zip = ZipFile.OpenRead(path);
+
             return [.. zip.Entries
                 .Where(e => !string.IsNullOrEmpty(e.Name))
                 .Select(e => $"{path}|{e.FullName}")];
         }
+
         return [path];
     }
 
-    // 패치: 단일파일 → [파일], 폴더 → [파일들], ZIP → [내부 엔트리 가상경로]
     private static List<string> ExpandPatch(string path)
     {
         if (Directory.Exists(path))
@@ -90,9 +82,11 @@ public static class PatchMatcher
         }
 
         var ext = Path.GetExtension(path).ToLowerInvariant();
+
         if (ext == ".zip")
         {
             using var zip = ZipFile.OpenRead(path);
+
             return [.. zip.Entries
                 .Where(e => PatchExtensions.Contains(Path.GetExtension(e.Name)))
                 .Select(e => $"{path}|{e.FullName}")];
