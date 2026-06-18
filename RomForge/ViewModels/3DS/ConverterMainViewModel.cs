@@ -233,7 +233,7 @@ public class ConverterMainViewModel : ToolTabViewModel
             }
             catch (Exception ex)
             {
-                AppendLog($"치명적 오류 발생: {ex.Message}", LogLevel.Error);
+                AppendLog($"오류: {ex.Message}", LogLevel.Error);
                 foreach (var item in FileItems.Where(i => i.Status == "변환중"))
                     item.Status = "실패";
             }

@@ -156,7 +156,7 @@ public static class NspSplitService
                 string targetId = BitConverter.ToString(record.NcaId).Replace("-", string.Empty).ToLower();
 
                 string ncaKey = fileRegistry.Keys.FirstOrDefault(k =>
-                    Path.GetFileNameWithoutExtension(k).StartsWith(targetId, StringComparison.OrdinalIgnoreCase));
+                    Path.GetFileNameWithoutExtension(k).StartsWith(targetId, StringComparison.OrdinalIgnoreCase)).ToString();
 
                 if (ncaKey == null) 
                     continue;
@@ -273,6 +273,10 @@ public static class NspSplitService
             log?.Invoke($"{string.Format(Res.Log_SplitComplete, outName)} ({index}/{groupCount})", LogLevel.Ok, meta.TitleId);
 
             return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

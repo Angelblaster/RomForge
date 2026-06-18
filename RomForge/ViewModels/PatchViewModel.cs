@@ -176,7 +176,7 @@ public class PatchViewModel : ToolTabViewModel
             }
 
             NormalVM.Progress = 100;
-            Log($"패치 완료: {Path.GetFileName(NormalVM.SourcePath)}", LogLevel.Ok);
+            Log($"패치 완료", LogLevel.Ok);
         }
         catch (OperationCanceledException)
         {

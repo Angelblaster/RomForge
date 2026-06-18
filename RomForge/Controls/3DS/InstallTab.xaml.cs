@@ -96,7 +96,7 @@ public partial class InstallTab : UserControl
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            Vm.AppendLog($"설치 오류:\n{ex.Message}", Common.LogLevel.Error);
+            Vm.AppendLog($"오류: {ex.Message}", Common.LogLevel.Error);
         }
         finally
         {

@@ -144,12 +144,12 @@ public class InstallerMainViewModel : ToolTabViewModel
         catch (OperationCanceledException)
         {
             StatusMessage = "취소되었습니다.";
-            AppendLog("사용자에 의해 작업이 취소되었습니다.", LogLevel.Error);
+            AppendLog("추출이 취소되었습니다.", LogLevel.Error);
         }
         catch (Exception ex)
         {
             StatusMessage = $"오류: {ex.Message}";
-            AppendLog($"작업 중 오류 발생: {ex.Message}", LogLevel.Error);
+            AppendLog($"오류: {ex.Message}", LogLevel.Error);
             throw;
         }
         finally
@@ -275,7 +275,7 @@ public class InstallerMainViewModel : ToolTabViewModel
 
             SetLoading(true);
             StatusMessage = $"설치 시작: {selected.ShortDescription}";
-            AppendLog($"설치 프로세스 시작: {selected.FilePath}", LogLevel.Info);
+            AppendLog($"설치 시작: {selected.FilePath}", LogLevel.Info);
 
             try
             {
@@ -314,12 +314,12 @@ public class InstallerMainViewModel : ToolTabViewModel
                 }
 
                 StatusMessage = $"설치 완료: {selected.ShortDescription}";
-                AppendLog($"성공적으로 설치가 완료되었습니다: {selected.ShortDescription}", LogLevel.Ok);
+                AppendLog($"설치 완료: {selected.ShortDescription}", LogLevel.Ok);
             }
             catch (OperationCanceledException)
             {
                 StatusMessage = "취소되었습니다.";
-                AppendLog("설정 작업이 사용자에 의해 취소되었습니다.", LogLevel.Error);
+                AppendLog("설치가 취소되었습니다.", LogLevel.Error);
                 if (Directory.Exists(titleRoot))
                     try { Directory.Delete(titleRoot, true); } catch { }
                 throw;
@@ -327,7 +327,7 @@ public class InstallerMainViewModel : ToolTabViewModel
             catch (Exception ex)
             {
                 StatusMessage = $"오류: {ex.Message}";
-                AppendLog($"설치 중 예외 발생: {ex.Message}", LogLevel.Error);
+                AppendLog($"오류: {ex.Message}", LogLevel.Error);
                 throw;
             }
             finally

@@ -115,6 +115,10 @@ public static class NspMergeService
 
                 }).ToList(); results.Add(await RunMergeProcess(req, keySet, groupMeta, isValidationEnabled, forceKeyGen0, idx, groups.Count, group.BaseMetas.Count > 0, group.PatchMetas.Count > 0, progress, log, ct));
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 log?.Invoke(string.Format(Res.Log_MergeFailed, group.BaseTitleId, ex.Message), LogLevel.Error, group.BaseTitleId);
@@ -367,6 +371,10 @@ public static class NspMergeService
             log?.Invoke(string.Format($"{Res.Log_MergeComplete} ({index}/{groupCount})", finalFileName), LogLevel.Ok, req.TargetBaseTitleId);
 
             return finalPath;
+        }
+        catch(OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

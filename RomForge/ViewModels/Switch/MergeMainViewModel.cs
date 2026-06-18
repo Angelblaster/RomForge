@@ -185,6 +185,7 @@ public class MergeMainViewModel : ToolTabViewModel
             }
             catch (OperationCanceledException)
             {
+                Log($"병합이 취소되었습니다.", LogLevel.Error);
             }
             catch (Exception ex)
             {
@@ -244,6 +245,7 @@ public class MergeMainViewModel : ToolTabViewModel
             }
             catch (OperationCanceledException)
             {
+                Log($"분리가 취소되었습니다.", LogLevel.Error);
             }
             catch (Exception ex)
             {

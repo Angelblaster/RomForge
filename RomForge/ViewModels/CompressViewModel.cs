@@ -226,7 +226,7 @@ public class CompressViewModel : ToolTabViewModel
             }
             catch (OperationCanceledException)
             {
-                AppendLog("취소되었습니다.", LogLevel.Error);
+                AppendLog("작업이 취소되었습니다.", LogLevel.Error);
                 foreach (var item in FileItems.Where(i => i.Status == "대기중" || i.Status == "변환중"))
                     item.Status = "취소";
             }
