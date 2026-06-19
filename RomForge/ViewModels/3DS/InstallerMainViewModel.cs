@@ -121,7 +121,8 @@ public class InstallerMainViewModel : ToolTabViewModel
 
     private void EnsureInitialized()
     {
-        if (_keyStore != null) return;
+        if (_keyStore != null) 
+            return;
 
         _keyStore = new KeyStore();
         _keyStore.LoadMovable(MovablePath);
@@ -186,7 +187,7 @@ public class InstallerMainViewModel : ToolTabViewModel
             catch (Exception ex)
             {
                 StatusMessage = $"오류: {ex.Message}";
-                AppendLog($"타이틀 로드 중 치명적 오류: {ex.Message}", LogLevel.Error);
+                AppendLog($"오류: {ex.Message}", LogLevel.Error);
                 throw;
             }
             finally

@@ -24,7 +24,8 @@ public partial class InstallTab : UserControl
 
     private async void InstallList_Drop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is not string[] files) return;
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] files) 
+            return;
 
         var allFiles = files
             .SelectMany(path => Directory.Exists(path) ? GetFilesSafe(path) : [path])
@@ -54,7 +55,9 @@ public partial class InstallTab : UserControl
             Multiselect = true
         };
 
-        if (dialog.ShowDialog() != true) return;
+        if (dialog.ShowDialog() != true) 
+            return;
+
         await Vm.Install.AddFiles(dialog.FileNames);
     }
 
@@ -67,17 +70,17 @@ public partial class InstallTab : UserControl
             FileName = "폴더 선택"
         };
 
-        if (dialog.ShowDialog() != true) return;
+        if (dialog.ShowDialog() != true) 
+            return;
 
         string folder = Path.GetDirectoryName(dialog.FileName)!;
+
         await Vm.Install.AddFiles(GetFilesSafe(folder));
     }
 
-    private void InstallRemove_Click(object sender, RoutedEventArgs e) =>
-        Vm.Install.RemoveItems(InstallListView.SelectedItems.Cast<TitleViewModel>());
+    private void InstallRemove_Click(object sender, RoutedEventArgs e) => Vm.Install.RemoveItems(InstallListView.SelectedItems.Cast<TitleViewModel>());
 
-    private void InstallClear_Click(object sender, RoutedEventArgs e) =>
-        Vm.Install.Clear();
+    private void InstallClear_Click(object sender, RoutedEventArgs e) => Vm.Install.Clear();
 
     private async void Install_Click(object sender, RoutedEventArgs e)
     {
@@ -88,8 +91,12 @@ public partial class InstallTab : UserControl
         {
             foreach (var item in InstallListView.Items)
             {
-                if (item is not TitleViewModel title) continue;
-                if (_installCts.IsCancellationRequested) continue;
+                if (item is not TitleViewModel title) 
+                    continue;
+
+                if (_installCts.IsCancellationRequested) 
+                    continue;
+
                 await Vm.InstallAsync(title, _installCts.Token);
             }
         }
@@ -111,9 +118,19 @@ public partial class InstallTab : UserControl
     private static List<string> GetFilesSafe(string folder)
     {
         var files = new List<string>();
-        try { files.AddRange(Directory.GetFiles(folder)); } catch { }
+
+        try 
+        {
+            files.AddRange(Directory.GetFiles(folder)); 
+        } 
+        catch { }
         foreach (var subDir in Directory.GetDirectories(folder))
-            try { files.AddRange(GetFilesSafe(subDir)); } catch { }
+            try 
+            { 
+                files.AddRange(GetFilesSafe(subDir)); 
+            } 
+            catch { }
+
         return files;
     }
 }

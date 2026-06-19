@@ -9,7 +9,6 @@ namespace RomForge.Controls.Util;
 public partial class ZipImageToolTab : UserControl
 {
     private UsbDetector? _usbDetector;
-    private readonly bool _suppressSelectionChanged;
 
     private ZipImageToolMainViewModel? ViewModel => DataContext as ZipImageToolMainViewModel;
 
@@ -30,9 +29,11 @@ public partial class ZipImageToolTab : UserControl
         _ = InitializeDrivesAsync();
 
         Window parentWindow = Window.GetWindow(this);
+
         if (parentWindow != null)
         {
             _usbDetector = new UsbDetector();
+
             _usbDetector.Register(parentWindow);
             _usbDetector.DeviceChanged += async () =>
             {
