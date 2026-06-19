@@ -1,9 +1,4 @@
 ﻿using PBP.Core.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PBP.Core.Services;
 
@@ -11,10 +6,6 @@ public static class PbpHeaderBuilder
 {
     private const uint PBPMAGIC = 0x50425000;
 
-    /// <summary>
-    /// 원본: PbpWriter.EnsureRequiredResourcesExist
-    /// Icon0/DataPsp가 비어있으면 BASE.PBP에서 추출해서 채운다
-    /// </summary>
     public static void EnsureRequiredAssets(PbpAssets assets, byte[] basePbpBytes)
     {
         using var basePbp = new MemoryStream(basePbpBytes);
@@ -55,9 +46,6 @@ public static class PbpHeaderBuilder
         }
     }
 
-    /// <summary>
-    /// 원본: PbpWriter.BuildHeader
-    /// </summary>
     public static uint[] BuildHeader(PbpAssets assets, uint sfoSize)
     {
         uint currentOffset = 0x28;
@@ -66,25 +54,25 @@ public static class PbpHeaderBuilder
         header[0] = PBPMAGIC;
         header[1] = 0x10000;
 
-        header[2] = currentOffset; // SFO 시작
+        header[2] = currentOffset;
 
         currentOffset += sfoSize;
-        header[3] = currentOffset; // ICON0 시작
+        header[3] = currentOffset;
 
         currentOffset += (uint)(assets.Icon0Png?.Length ?? 0);
-        header[4] = currentOffset; // ICON1 시작
+        header[4] = currentOffset;
 
         currentOffset += (uint)(assets.Icon1Pmf?.Length ?? 0);
-        header[5] = currentOffset; // PIC0 시작
+        header[5] = currentOffset;
 
         currentOffset += (uint)(assets.Pic0Png?.Length ?? 0);
-        header[6] = currentOffset; // PIC1 시작
+        header[6] = currentOffset;
 
         currentOffset += (uint)(assets.Pic1Png?.Length ?? 0);
-        header[7] = currentOffset; // SND0 시작
+        header[7] = currentOffset;
 
         currentOffset += (uint)(assets.Snd0At3?.Length ?? 0);
-        header[8] = currentOffset; // DATA.PSP 시작
+        header[8] = currentOffset;
 
         var psarOffset = header[8] + (uint)(assets.DataPsp?.Length ?? 0);
 
@@ -93,7 +81,7 @@ public static class PbpHeaderBuilder
             psarOffset += (0x10000 - (psarOffset % 0x10000));
         }
 
-        header[9] = psarOffset; // DATA.PSAR 시작
+        header[9] = psarOffset;
 
         return header;
     }

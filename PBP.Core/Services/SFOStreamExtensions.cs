@@ -30,23 +30,22 @@ public static class SFOStreamExtensions
         }
 
         for (var i = 0; i < sfo.Padding; i++)
-        {
             stream.WriteByte(0);
-        }
 
         for (var i = 0; i < sfo.Entries.Count; i++)
         {
             var entry = sfo.Entries[i];
             var value = entry.Value;
+
             switch (entry.Format)
             {
                 case 0x0204:
                     stream.Write((string)value!, 0, ((string)value!).Length);
                     stream.WriteByte(0);
+
                     for (var j = 0; j < entry.MaxLength - entry.Length; j++)
-                    {
                         stream.WriteByte(0);
-                    }
+
                     break;
                 case 0x0404:
                     stream.WriteInt32(Convert.ToInt32(value), 1);
@@ -58,12 +57,14 @@ public static class SFOStreamExtensions
     public static void Write(this Stream stream, string buffer, int offset, int size)
     {
         var membuf = System.Text.Encoding.ASCII.GetBytes(buffer);
+
         stream.Write(membuf, offset, size);
     }
 
     public static void WriteUInt16(this Stream stream, ushort value, int count)
     {
         var p = 0;
+
         while (p < count)
         {
             stream.Write(BitConverter.GetBytes(value), 0, sizeof(ushort));
@@ -74,6 +75,7 @@ public static class SFOStreamExtensions
     public static void WriteUInt32(this Stream stream, uint value, int count)
     {
         var p = 0;
+
         while (p < count)
         {
             stream.Write(BitConverter.GetBytes(value), 0, sizeof(uint));
@@ -84,6 +86,7 @@ public static class SFOStreamExtensions
     public static void WriteInt32(this Stream stream, int value, int count)
     {
         var p = 0;
+
         while (p < count)
         {
             stream.Write(BitConverter.GetBytes(value), 0, sizeof(int));

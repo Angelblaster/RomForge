@@ -35,7 +35,7 @@ public partial class InstalledTitlesTab : UserControl
         }
         catch (Exception ex)
         {
-            Vm.AppendLog($"로드 실패:\n{ex.Message}", Common.LogLevel.Error);
+            Vm.AppendLog($"로드 실패: {ex.Message}", Common.LogLevel.Error);
         }
     }
 
@@ -87,11 +87,11 @@ public partial class InstalledTitlesTab : UserControl
             await Vm.ExtractTitleAsync(selected, dialog.FileName, asCci);
 
             if (File.Exists(dialog.FileName))
-                Vm.AppendLog($"추출 완료!\n{dialog.FileName}", Common.LogLevel.Ok);
+                Vm.AppendLog($"추출 완료: {dialog.FileName}", Common.LogLevel.Ok);
         }
         catch (Exception ex)
         {
-            Vm.AppendLog($"추출 실패:\n{ex.Message}", Common.LogLevel.Error);
+            Vm.AppendLog($"추출 실패: {ex.Message}", Common.LogLevel.Error);
         }
     }
 }

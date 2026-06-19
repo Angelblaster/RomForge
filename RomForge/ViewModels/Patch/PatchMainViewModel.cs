@@ -145,6 +145,8 @@ public class PatchMainViewModel : ToolTabViewModel
                         }
                     case RomFormat.Unknown:
                         {
+                            Log($"압축 시작: {Path.GetFileName(outputPath)}", LogLevel.Info);
+
                             string zipPath = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(NormalVM.SourcePath) + ".zip");
                             await Task.Run(() =>
                             {
@@ -153,13 +155,16 @@ public class PatchMainViewModel : ToolTabViewModel
                                 archive.CreateEntryFromFile(outputPath, Path.GetFileName(NormalVM.SourcePath));
                             }, ct);
                             File.Delete(outputPath);
+
+                            Log($"압축 완료: {Path.GetFileName(outputPath)}", LogLevel.Ok);
+
                             break;
                         }
                 }
             }
 
             NormalVM.Progress = 100;
-            Log($"{Path.GetFileName(NormalVM.SourcePath)} 패치 완료.", LogLevel.Ok);
+            Log($"패치 완료: {Path.GetFileName(NormalVM.SourcePath)}", LogLevel.Ok);
 
             if (Directory.Exists(outputDir))
                 Process.Start("explorer.exe", $"\"{outputDir}\"");
