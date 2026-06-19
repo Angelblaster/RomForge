@@ -13,12 +13,11 @@ using LibHac.Tools.Ncm;
 using NSW.Core;
 using NSW.Core.Models;
 using NSW.Utils;
-using RomForge.Core.Services.Switch;
 using System.IO;
 using Path = System.IO.Path;
 using Res = NSW.Core.Properties.Resources;
 
-namespace RomForge.Sercives.Switch;
+namespace RomForge.Core.Services.Switch;
 
 public static class NspSplitService
 {

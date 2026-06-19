@@ -13,7 +13,6 @@ using NSW.Core;
 using NSW.Core.Models;
 using NSW.Utils;
 using RomForge.Core.Models.Switch;
-using RomForge.Sercives.Switch;
 using System.IO;
 using Path = System.IO.Path;
 using Res = NSW.Core.Properties.Resources;

@@ -15,6 +15,8 @@ public class SwitchMainViewModel : ToolTabViewModel
 
     public MergeMainViewModel MergeVM { get; }
 
+    public KeygenMainViewModel KeygenVM { get; }
+
     public int SubTabIndex
     {
         get => _subTabIndex;
@@ -32,19 +34,28 @@ public class SwitchMainViewModel : ToolTabViewModel
     {
         RepackVM = new RepackMainViewModel();
         MergeVM = new MergeMainViewModel(config);
+        KeygenVM = new KeygenMainViewModel();
 
         RegisterChild(RepackVM);
         RegisterChild(MergeVM);
+        RegisterChild(KeygenVM);
 
         RepackVM.LogEntries.CollectionChanged += LogEntries_CollectionChanged;
         MergeVM.LogEntries.CollectionChanged += LogEntries_CollectionChanged;
+        KeygenVM.LogEntries.CollectionChanged += LogEntries_CollectionChanged;
 
         SyncLogEntries();
     }
 
     private void LogEntries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        var targetCollection = _subTabIndex == 0 ? RepackVM.LogEntries : MergeVM.LogEntries;
+        var targetCollection = _subTabIndex switch
+        {
+            0 => RepackVM.LogEntries,
+            1 => MergeVM.LogEntries,
+            2 => KeygenVM.LogEntries,
+            _ => RepackVM.LogEntries
+        };
 
         if (sender != targetCollection)
             return;
@@ -89,7 +100,13 @@ public class SwitchMainViewModel : ToolTabViewModel
 
     private void DoSync()
     {
-        var currentSource = _subTabIndex == 0 ? RepackVM.LogEntries : MergeVM.LogEntries;
+        var currentSource = _subTabIndex switch
+        {
+            0 => RepackVM.LogEntries,
+            1 => MergeVM.LogEntries,
+            2 => KeygenVM.LogEntries,
+            _ => RepackVM.LogEntries
+        };
 
         foreach (var item in currentSource)
             LogEntries.Add(item);

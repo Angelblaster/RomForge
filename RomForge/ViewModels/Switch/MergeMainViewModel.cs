@@ -5,7 +5,6 @@ using RomForge.Core;
 using RomForge.Core.Services.Switch;
 using RomForge.Helpers;
 using RomForge.Models;
-using RomForge.Sercives.Switch;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -260,10 +259,7 @@ public class MergeMainViewModel : ToolTabViewModel
         NotifyButtonStates();
     }
 
-    public void Cancel()
-    {
-        _cts?.Cancel();
-    }
+    public void Cancel() => _cts?.Cancel();
 
     #endregion
 

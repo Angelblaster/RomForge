@@ -4,7 +4,7 @@ using LibHac.Tools.FsSystem;
 using LibHac.Tools.FsSystem.NcaUtils;
 using System.IO;
 
-namespace RomForge.Sercives.Switch;
+namespace RomForge.Core.Services.Switch;
 
 public static class NcaRecryptService
 {
@@ -14,7 +14,7 @@ public static class NcaRecryptService
 
         var nca = new Nca(keySet, inStorage);
 
-        if ((int)nca.Header.KeyGeneration == newKeyGeneration)
+        if (nca.Header.KeyGeneration == newKeyGeneration)
         {
             inputStream.Position = 0;
             await Common.Utils.CopyStreamAsync(inputStream, outputStream, onRead, ct);
