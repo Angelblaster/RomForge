@@ -39,6 +39,7 @@
                         <Style TargetType="ComboBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Left"/>
                             <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            <Setter Property="Foreground" Value="White"/>
                         </Style>
                     </ComboBox.ItemContainerStyle>
                 </ComboBox>
@@ -164,6 +165,7 @@
                                     <Style TargetType="ComboBoxItem">
                                         <Setter Property="HorizontalContentAlignment" Value="Left"/>
                                         <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                        <Setter Property="Foreground" Value="White"/>
                                     </Style>
                                 </ComboBox.ItemContainerStyle>
                             </ComboBox>

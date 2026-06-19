@@ -48,7 +48,8 @@ public partial class RepackTab : UserControl
         ViewModel.Context = new RepackMainViewModel.BuildContext(
             fileMgr.GameFiles,
             langTab.CurrentMetadata,
-            langTab.ForcedLanguage);
+            langTab.ForcedLanguage,
+            langTab.TargetIdOffset);
     }
 
     private void TxtPatch_DragEnter(object sender, DragEventArgs e)

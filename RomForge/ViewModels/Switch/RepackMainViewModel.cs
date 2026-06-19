@@ -77,7 +77,7 @@ namespace RomForge.ViewModels.Switch
 
         public Visibility OutputHintVisibility => string.IsNullOrEmpty(OutputPath) ? Visibility.Visible : Visibility.Collapsed;
 
-        public record BuildContext(IList<GameFile> GameFiles, GameMetadata? Metadata, ApplicationControlProperty.Language ForcedLanguage);
+        public record BuildContext(IList<GameFile> GameFiles, GameMetadata? Metadata, ApplicationControlProperty.Language ForcedLanguage, byte? TargetIdOffset);
 
         public BuildContext? Context { get; set; }
 
@@ -171,6 +171,8 @@ namespace RomForge.ViewModels.Switch
                     req.Language = Context?.ForcedLanguage ?? default;
                     req.UserMetadata = Context?.Metadata;
                     req.OverrideKeyGeneration = 1;
+                    if(Context?.TargetIdOffset.HasValue == true)
+                        req.TargetIdOffset = Context?.TargetIdOffset;
                     string finalResult = NspBuildService.Run(req, mode, progress, (msg, lvl) => Log(msg, lvl), token);
                     Log($"완료! 총 소요: {_totalSw.Elapsed:mm\\:ss}", LogLevel.Ok);
                     if (Directory.Exists(req.OutputDir)) Process.Start("explorer.exe", $"\"{req.OutputDir}\"");
