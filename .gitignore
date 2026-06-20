@@ -14,8 +14,10 @@ seeddb.bin
 certs.bin
 base.pbp
 BASE.zip
-ICON0.PNG
-DATA.PSP
+ICON0.png
+PIC0.png
+PIC1.png
+DATA.psp
 DATA1.bin
 DATA2.bin
 DATA3.bin
