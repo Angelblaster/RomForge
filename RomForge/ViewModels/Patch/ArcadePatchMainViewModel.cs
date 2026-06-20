@@ -305,7 +305,7 @@ public class ArcadePatchMainViewModel : ToolTabViewModel
             .Select(d =>
             {
                 token.ThrowIfCancellationRequested();
-                return RomForge.Core.Services.Patch.PatchPackageService.ParseDatFile(d.FileName, d.Content);
+                return Core.Services.Patch.PatchPackageService.ParseDatFile(d.FileName, d.Content);
             })];
     }
 
@@ -445,7 +445,7 @@ public class ArcadePatchMainViewModel : ToolTabViewModel
                 ? [new PatchEntry { DisplayName = Path.GetFileName(path), EntryPath = path }] : [];
 
         if (Directory.Exists(path))
-            return [.. Directory.GetFiles(path, "*.ips")
+            return [.. Directory.GetFiles(path, "*.ips", SearchOption.AllDirectories)
                 .Select(f => new PatchEntry { DisplayName = Path.GetFileName(f), EntryPath = f })];
 
         return [];
@@ -469,7 +469,7 @@ public class ArcadePatchMainViewModel : ToolTabViewModel
         }
 
         if (Directory.Exists(patchPath))
-            return [.. Directory.GetFiles(patchPath, "*.dat")
+            return [.. Directory.GetFiles(patchPath, "*.dat", SearchOption.AllDirectories)
                 .Select(f => (Path.GetFileName(f), File.ReadAllText(f, Encoding.UTF8)))];
 
         return [];
