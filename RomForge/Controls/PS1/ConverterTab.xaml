@@ -7,6 +7,38 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
-            
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="220"/>
+        </Grid.ColumnDefinitions>
+
+        <ListView Grid.Column="0" ItemsSource="{Binding FileItems}" AllowDrop="True" Drop="LvFiles_Drop">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="No" DisplayMemberBinding="{Binding No}"/>
+                    <GridViewColumn Header="파일명" DisplayMemberBinding="{Binding FileName}"/>
+                    <GridViewColumn Header="확장자" DisplayMemberBinding="{Binding Extension}"/>
+                    <GridViewColumn Header="게임ID" DisplayMemberBinding="{Binding GameId}"/>
+                    <GridViewColumn Header="용량" DisplayMemberBinding="{Binding FileSize}"/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <StackPanel Grid.Column="1" Margin="10">
+            <TextBlock Text="ICON0"/>
+            <Border AllowDrop="True" Drop="Icon0_Drop">
+                <Image Source="{Binding Icon0Image}"/>
+            </Border>
+
+            <TextBlock Text="PIC0" Margin="0,10,0,0"/>
+            <Border AllowDrop="True" Drop="Pic0_Drop">
+                <Image Source="{Binding Pic0Image}"/>
+            </Border>
+
+            <TextBlock Text="PIC1" Margin="0,10,0,0"/>
+            <Border AllowDrop="True" Drop="Pic1_Drop">
+                <Image Source="{Binding Pic1Image}"/>
+            </Border>
+        </StackPanel>
     </Grid>
 </UserControl>

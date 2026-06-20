@@ -22,7 +22,7 @@ namespace PBP.Core.Properties {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "18.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Resources {
+    public class Resources {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
@@ -59,81 +59,81 @@ namespace PBP.Core.Properties {
                 resourceCulture = value;
             }
         }
-        
+
         /// <summary>
         ///   System.Byte[] 형식의 지역화된 리소스를 찾습니다.
         /// </summary>
-        internal static byte[] BASE {
+        public static byte[] BASE {
             get {
                 object obj = ResourceManager.GetObject("BASE", resourceCulture);
                 return ((byte[])(obj));
             }
         }
-        
+
         /// <summary>
         ///   System.Byte[] 형식의 지역화된 리소스를 찾습니다.
         /// </summary>
-        internal static byte[] DATA {
+        public static byte[] DATA {
             get {
                 object obj = ResourceManager.GetObject("DATA", resourceCulture);
                 return ((byte[])(obj));
             }
         }
-        
+
         /// <summary>
         ///   System.Byte[] 형식의 지역화된 리소스를 찾습니다.
         /// </summary>
-        internal static byte[] DATA1 {
+        public static byte[] DATA1 {
             get {
                 object obj = ResourceManager.GetObject("DATA1", resourceCulture);
                 return ((byte[])(obj));
             }
         }
-        
+
         /// <summary>
         ///   System.Byte[] 형식의 지역화된 리소스를 찾습니다.
         /// </summary>
-        internal static byte[] DATA2 {
+        public static byte[] DATA2 {
             get {
                 object obj = ResourceManager.GetObject("DATA2", resourceCulture);
                 return ((byte[])(obj));
             }
         }
-        
+
         /// <summary>
         ///   System.Byte[] 형식의 지역화된 리소스를 찾습니다.
         /// </summary>
-        internal static byte[] DATA3 {
+        public static byte[] DATA3 {
             get {
                 object obj = ResourceManager.GetObject("DATA3", resourceCulture);
                 return ((byte[])(obj));
             }
         }
-        
+
         /// <summary>
         ///   System.Byte[] 형식의 지역화된 리소스를 찾습니다.
         /// </summary>
-        internal static byte[] ICON0 {
+        public static byte[] ICON0 {
             get {
                 object obj = ResourceManager.GetObject("ICON0", resourceCulture);
                 return ((byte[])(obj));
             }
         }
-        
+
         /// <summary>
         ///   System.Byte[] 형식의 지역화된 리소스를 찾습니다.
         /// </summary>
-        internal static byte[] PIC0 {
+        public static byte[] PIC0 {
             get {
                 object obj = ResourceManager.GetObject("PIC0", resourceCulture);
                 return ((byte[])(obj));
             }
         }
-        
+
         /// <summary>
         ///   System.Byte[] 형식의 지역화된 리소스를 찾습니다.
         /// </summary>
-        internal static byte[] PIC1 {
+        public static byte[] PIC1 {
             get {
                 object obj = ResourceManager.GetObject("PIC1", resourceCulture);
                 return ((byte[])(obj));

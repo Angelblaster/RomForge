@@ -107,9 +107,34 @@ public static class PbpPackager
         sfoBuilder.AddEntry(SFOKeys.PARENTAL_LEVEL, SFOValues.ParentalLevel);
         sfoBuilder.AddEntry(SFOKeys.PSP_SYSTEM_VER, SFOValues.PSPSystemVersion);
         sfoBuilder.AddEntry(SFOKeys.REGION, 0x8000);
-        sfoBuilder.AddEntry(SFOKeys.TITLE, gameTitle);
+
+        string safeTitle = LimitStringToUtf8Bytes(gameTitle, 63);
+
+        sfoBuilder.AddEntry(SFOKeys.TITLE, safeTitle);
 
         return sfoBuilder.Build();
+    }
+
+    private static string LimitStringToUtf8Bytes(string input, int maxBytes)
+    {
+        if (string.IsNullOrEmpty(input)) return "PSP GAME";
+
+        var encoding = System.Text.Encoding.UTF8;
+        int validLength = 0;
+        int currentBytes = 0;
+
+        foreach (char c in input)
+        {
+            int charBytes = encoding.GetByteCount([c]);
+
+            if (currentBytes + charBytes > maxBytes)
+                break;
+
+            currentBytes += charBytes;
+            validLength++;
+        }
+
+        return input[..validLength];
     }
 
     private static void WriteCommonSections(Stream outputStream, uint[] header, SFOData sfo, PbpAssets assets, uint psarOffset)

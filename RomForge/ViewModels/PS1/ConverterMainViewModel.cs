@@ -1,20 +1,25 @@
 ﻿using Common;
 using Common.WPF.ViewModels;
+using PBP.Core.Models;
 using PBP.Core.Services;
+using RomForge.Core.Services.PS1;
 using RomForge.Helpers;
 using RomForge.Models;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 namespace RomForge.ViewModels.PS1;
 
 public class ConverterMainViewModel : ToolTabViewModel
 {
+    private const int MaxItems = 8;
+
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".cue", ".m3u", ".iso", ".chd"
+        ".cue", ".m3u", ".iso", ".bin", ".chd"
     };
 
     private bool _isConverting;
@@ -25,11 +30,26 @@ public class ConverterMainViewModel : ToolTabViewModel
     }
 
     private CancellationTokenSource _cts = new();
+    private string? _lastIconGameId;
+    private CancellationTokenSource? _iconCts;
 
     public ObservableCollection<LogEntry> LogEntries { get; } = [];
-    public ObservableCollection<CompressFileItem> FileItems { get; } = [];
+    public ObservableCollection<DiscFileItem> FileItems { get; } = [];
 
     public Visibility HintVisibility => FileItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    private BitmapImage? _icon0Image;
+    public BitmapImage? Icon0Image { get => _icon0Image; set { _icon0Image = value; OnPropertyChanged(); } }
+
+    private BitmapImage? _pic0Image;
+    public BitmapImage? Pic0Image { get => _pic0Image; set { _pic0Image = value; OnPropertyChanged(); } }
+
+    private BitmapImage? _pic1Image;
+    public BitmapImage? Pic1Image { get => _pic1Image; set { _pic1Image = value; OnPropertyChanged(); } }
+
+    private byte[] _icon0Bytes = PBP.Core.Properties.Resources.ICON0;
+    private byte[] _pic0Bytes = PBP.Core.Properties.Resources.PIC0;
+    private byte[] _pic1Bytes = PBP.Core.Properties.Resources.PIC1;
 
     public ICommand RunCommand { get; }
     public ICommand CancelCommand { get; }
@@ -38,142 +58,169 @@ public class ConverterMainViewModel : ToolTabViewModel
     {
         RunCommand = new RelayCommand(async _ => await RunAsync(), _ => !IsConverting && FileItems.Count > 0);
         CancelCommand = new RelayCommand(_ => _cts.Cancel(), _ => IsConverting);
+
+        Icon0Image = BytesToImage(_icon0Bytes);
+        Pic0Image = BytesToImage(_pic0Bytes);
+        Pic1Image = BytesToImage(_pic1Bytes);
     }
 
     public void AddPaths(IEnumerable<string> paths)
     {
         var existing = FileItems.Select(f => f.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var candidates = ExpandPaths(paths)
+            .Where(p => SupportedExtensions.Contains(Path.GetExtension(p)))
+            .Where(p => existing.Add(p))
+            .ToList();
 
-        foreach (var path in ExpandPaths(paths))
+        var room = MaxItems - FileItems.Count;
+        var toAdd = candidates.Take(Math.Max(room, 0)).ToList();
+        var rejected = candidates.Count - toAdd.Count;
+
+        foreach (var path in toAdd)
         {
-            if (!SupportedExtensions.Contains(Path.GetExtension(path)))
-                continue;
+            var item = new DiscFileItem(path);
+            FileItems.Add(item);
+            _ = LoadItemInfoAsync(item);
+        }
 
-            if (!existing.Add(path))
-                continue;
-
-            FileItems.Add(new CompressFileItem(path) { No = FileItems.Count + 1 });
+        if (rejected > 0)
+        {
+            MessageBox.Show($"최대 {MaxItems}개까지만 추가할 수 있어요. {rejected}개 파일은 추가되지 않았어요.",
+                "추가 제한", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         OnPropertyChanged(nameof(HintVisibility));
         CommandManager.InvalidateRequerySuggested();
     }
 
-    public void RemoveItems(IEnumerable<CompressFileItem> items)
+    public void RemoveItems(IEnumerable<DiscFileItem> items)
     {
         foreach (var item in items.ToList())
             FileItems.Remove(item);
 
         OnPropertyChanged(nameof(HintVisibility));
+        ResortAndRenumber();
     }
 
     public void ClearItems()
     {
         FileItems.Clear();
         OnPropertyChanged(nameof(HintVisibility));
+        _lastIconGameId = null;
+        Icon0Image = BytesToImage(PBP.Core.Properties.Resources.ICON0);
+    }
+
+    // --- ICON0/PIC0/PIC1 드래그앤드롭 교체 ---
+
+    public void SetIcon0FromFile(string path) => SetImage(File.ReadAllBytes(path), bytes => { _icon0Bytes = bytes; Icon0Image = BytesToImage(bytes); });
+    public void SetPic0FromFile(string path) => SetImage(File.ReadAllBytes(path), bytes => { _pic0Bytes = bytes; Pic0Image = BytesToImage(bytes); });
+    public void SetPic1FromFile(string path) => SetImage(File.ReadAllBytes(path), bytes => { _pic1Bytes = bytes; Pic1Image = BytesToImage(bytes); });
+
+    private static void SetImage(byte[] rawBytes, Action<byte[]> apply)
+    {
+        try { apply(ImageConversion.ToPng(rawBytes)); }
+        catch { /* 이미지가 아니면 그냥 무시 */ }
+    }
+
+    // --- 내부 처리 ---
+
+    private async Task LoadItemInfoAsync(DiscFileItem item)
+    {
+        try
+        {
+            var (gameId, size) = await Task.Run(() =>
+            {
+                var ext = Path.GetExtension(item.FilePath).ToLowerInvariant();
+                var size = DiscSizeResolver.GetTotalSize(item.FilePath);
+
+                DiskSource source = ext switch
+                {
+                    ".cue" => DiskSource.FromBinCue(CueFileResolver.GetBinPath(item.FilePath), item.FilePath),
+                    ".chd" => DiskSource.FromChd(item.FilePath),
+                    ".m3u" => DiskSource.FromIso(ResolveM3uFirstDisc(item.FilePath)),
+                    _ => DiskSource.FromIso(item.FilePath)
+                };
+
+                var gameId = GameIdReader.ReadFromDisk(source);
+                return (gameId, size);
+            });
+
+            item.GameId = gameId;
+            item.FileSizeBytes = size;
+        }
+        catch (Exception ex)
+        {
+            item.GameId = "인식실패";
+            AppendLog($"[{item.FileName}] GameID 인식 실패: {ex.Message}", LogLevel.Error);
+        }
+
+        ResortAndRenumber();
+    }
+
+    private static string ResolveM3uFirstDisc(string m3uPath)
+    {
+        var dir = Path.GetDirectoryName(m3uPath)!;
+        var firstLine = File.ReadAllLines(m3uPath)
+            .Select(l => l.Trim())
+            .First(l => l.Length > 0 && !l.StartsWith('#'));
+
+        var fullPath = Path.IsPathRooted(firstLine) ? firstLine : Path.Combine(dir, firstLine);
+        return Path.GetExtension(fullPath).Equals(".cue", StringComparison.OrdinalIgnoreCase)
+            ? CueFileResolver.GetBinPath(fullPath)
+            : fullPath;
+    }
+
+    private void ResortAndRenumber()
+    {
+        var sorted = FileItems.OrderBy(i => i.GameId, StringComparer.OrdinalIgnoreCase).ToList();
+
+        for (var i = 0; i < sorted.Count; i++)
+        {
+            sorted[i].No = i + 1; // 1부터 시작 (No=1이 메인 디스크)
+            var oldIndex = FileItems.IndexOf(sorted[i]);
+            if (oldIndex != i) FileItems.Move(oldIndex, i);
+        }
+
+        _ = UpdateIconAsync();
+    }
+
+    private async Task UpdateIconAsync()
+    {
+        var primary = FileItems.FirstOrDefault(i => i.No == 1);
+        if (primary == null || primary.GameId == _lastIconGameId || primary.GameId is "인식중..." or "인식실패")
+            return;
+
+        _lastIconGameId = primary.GameId;
+        _iconCts?.Cancel();
+        _iconCts = new CancellationTokenSource();
+
+        var png = await CoverArtFetcher.TryDownloadIconPngAsync(primary.GameId, _iconCts.Token);
+
+        if (_iconCts.IsCancellationRequested) return;
+
+        _icon0Bytes = png ?? PBP.Core.Properties.Resources.ICON0;
+        Icon0Image = BytesToImage(_icon0Bytes);
+    }
+
+    private static BitmapImage BytesToImage(byte[] bytes)
+    {
+        var image = new BitmapImage();
+        using var ms = new MemoryStream(bytes);
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.StreamSource = ms;
+        image.EndInit();
+        image.Freeze();
+        return image;
     }
 
     private async Task RunAsync()
     {
         _cts.Dispose();
         _cts = new CancellationTokenSource();
-        ClearLog();
         IsConverting = true;
 
-        try
-        {
-            var cnt = 0;
-
-            foreach (var item in FileItems)
-            {
-                if (_cts.Token.IsCancellationRequested) break;
-                if (item.Status == "완료") continue;
-
-                item.Status = "변환중";
-                item.Progress = 0;
-
-                var progress = new Progress<ProgressInfo>(p => item.Progress = p.Percent);
-
-                try
-                {
-                    var ext = Path.GetExtension(item.FilePath).ToLowerInvariant();
-
-                    if (ext == ".m3u")
-                    {
-                        var (discs, mainTitle) = ParseM3u(item.FilePath);
-                        var outputPath = Path.Combine(Path.GetDirectoryName(item.FilePath)!, $"{mainTitle}.pbp");
-
-                        await PbpPackager.WriteMultiDiscAsync(discs, mainTitle, outputPath, 9,
-                            progress, (msg, lvl, id) => AppendLog(msg, lvl), _cts.Token);
-                    }
-                    else if (ext == ".chd")
-                    {
-                        throw new NotSupportedException("CHD는 아직 지원하지 않아요.");
-                    }
-                    else
-                    {
-                        var title = Path.GetFileNameWithoutExtension(item.FilePath);
-                        await PbpPackager.WriteSingleDiscAsync(item.FilePath, title, 9,
-                            progress, (msg, lvl, id) => AppendLog(msg, lvl), _cts.Token);
-                    }
-
-                    item.Progress = 100;
-                    item.Status = "완료";
-                    cnt++;
-                }
-                catch (OperationCanceledException)
-                {
-                    item.Status = "취소";
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    item.Status = "실패";
-                    AppendLog($"[{item.FileName}] {ex.Message}", LogLevel.Error);
-                }
-            }
-
-            if (cnt > 0)
-                AppendLog($"총 {cnt}개의 작업을 완료했습니다.", LogLevel.Ok);
-        }
-        catch (OperationCanceledException)
-        {
-            AppendLog("작업이 취소되었습니다.", LogLevel.Error);
-        }
-        finally
-        {
-            IsConverting = false;
-        }
-    }
-
-    /// <summary>
-    /// m3u는 디스크 경로를 줄 단위로 나열한 텍스트 파일.
-    /// 메인 타이틀은 파일명에서 "(Disc N)" 패턴을 제거해서 추정 — 정확한 타이틀이 필요하면 나중에 직접 수정 가능하게 UI에서 받아야 함.
-    /// </summary>
-    private static (List<(string IsoPath, string GameTitle)> Discs, string MainTitle) ParseM3u(string m3uPath)
-    {
-        var dir = Path.GetDirectoryName(m3uPath)!;
-        var lines = File.ReadAllLines(m3uPath)
-            .Select(l => l.Trim())
-            .Where(l => l.Length > 0 && !l.StartsWith('#'))
-            .ToList();
-
-        var discs = new List<(string, string)>();
-        foreach (var line in lines)
-        {
-            var rawPath = Path.IsPathRooted(line) ? line : Path.Combine(dir, line);
-            var path = Path.GetExtension(rawPath).Equals(".cue", StringComparison.OrdinalIgnoreCase)
-                ? CueFileResolver.GetBinPath(rawPath)
-                : rawPath;
-
-            discs.Add((path, Path.GetFileNameWithoutExtension(rawPath)));
-        }
-
-        var mainTitle = System.Text.RegularExpressions.Regex.Replace(
-            Path.GetFileNameWithoutExtension(m3uPath), @"\s*\(Disc\s*\d+\)", "",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
-
-        return (discs, mainTitle);
+        
     }
 
     private static IEnumerable<string> ExpandPaths(IEnumerable<string> paths)
@@ -188,8 +235,7 @@ public class ConverterMainViewModel : ToolTabViewModel
         foreach (var path in paths)
         {
             if (Directory.Exists(path))
-                foreach (var f in Directory.EnumerateFiles(path, "*.*", opts))
-                    yield return f;
+                foreach (var f in Directory.EnumerateFiles(path, "*.*", opts)) yield return f;
             else if (File.Exists(path))
                 yield return path;
         }
@@ -201,15 +247,9 @@ public class ConverterMainViewModel : ToolTabViewModel
         Application.Current.Dispatcher.Invoke(() => LogEntries.Add(new LogEntry { Message = msg, Level = level }));
     }
 
-    private void ClearLog()
-    {
-        if (Application.Current?.Dispatcher == null) return;
-        Application.Current.Dispatcher.Invoke(() => LogEntries.Clear());
-    }
-
     public static string GetFileDialogFilter()
     {
-        string wildcards = string.Join(";", SupportedExtensions.Select(ext => $"*{ext}"));
+        var wildcards = string.Join(";", SupportedExtensions.Select(ext => $"*{ext}"));
         return $"지원 파일|{wildcards}|모든 파일|*.*";
     }
 }

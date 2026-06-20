@@ -4,6 +4,7 @@ using RomForge.Core;
 using RomForge.Models;
 using RomForge.ViewModels._3DS;
 using RomForge.ViewModels.Patch;
+using RomForge.ViewModels.PS1;
 using RomForge.ViewModels.Settings;
 using RomForge.ViewModels.Switch;
 using RomForge.ViewModels.Util;
@@ -17,9 +18,15 @@ public class MainViewModel : ToolTabViewModel
     private readonly AppConfig _config = new AppConfig().Load();
 
     public PatchMainViewModel PatchVM { get; }
+
     public CompressMainViewModel CompressVM { get; }
-    public _3DSMainViewModel Main3DsVM { get; }
+
     public SwitchMainViewModel SwitchMainVM { get; }
+
+    public _3DSMainViewModel Main3DsVM { get; }
+
+    public PS1MainViewModel PS1MainVM { get; }
+
     public UtilMainViewModel UtilMainVM { get; }
 
     public SettingsMainViewModel Settings { get; }
@@ -41,7 +48,8 @@ public class MainViewModel : ToolTabViewModel
         1 => CompressVM.LogEntries,
         2 => SwitchMainVM.LogEntries,
         3 => Main3DsVM.LogEntries,
-        4=> UtilMainVM.LogEntries,
+        4 => PS1MainVM.LogEntries,
+        5 => UtilMainVM.LogEntries,
         _ => PatchVM.LogEntries
     };
 
@@ -53,6 +61,7 @@ public class MainViewModel : ToolTabViewModel
         CompressVM = new CompressMainViewModel(_config);
         SwitchMainVM = new SwitchMainViewModel(_config);
         Main3DsVM = new _3DSMainViewModel();
+        PS1MainVM = new PS1MainViewModel();
         UtilMainVM = new UtilMainViewModel();
         Settings = new SettingsMainViewModel(_config);
 
@@ -60,6 +69,7 @@ public class MainViewModel : ToolTabViewModel
         RegisterChild(CompressVM);
         RegisterChild(SwitchMainVM);
         RegisterChild(Main3DsVM);
+        RegisterChild(PS1MainVM);
         RegisterChild(UtilMainVM);
         RegisterChild(Settings);
     }

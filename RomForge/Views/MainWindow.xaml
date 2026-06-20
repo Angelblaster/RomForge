@@ -2,9 +2,10 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:RomForge.Views"
-        xmlns:controls="clr-namespace:RomForge.Controls"
-        xmlns:_3ds="clr-namespace:RomForge.Controls._3DS"
+        xmlns:controls="clr-namespace:RomForge.Controls"        
         xmlns:switch="clr-namespace:RomForge.Controls.Switch"
+        xmlns:_3ds="clr-namespace:RomForge.Controls._3DS"
+        xmlns:ps1="clr-namespace:RomForge.Controls.PS1"
         xmlns:util="clr-namespace:RomForge.Controls.Util"
         xmlns:vm="clr-namespace:RomForge.ViewModels"
         xmlns:helpers="clr-namespace:RomForge.Helpers"
@@ -22,9 +23,9 @@
             <RowDefinition Height="5"/>
             <RowDefinition Height="130" MinHeight="60"/>
         </Grid.RowDefinitions>
-        
+
         <TabControl SelectedIndex="{Binding SelectedTabIndex}">
-            
+
             <TabItem IsEnabled="{Binding IsIdle}">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal">
@@ -68,6 +69,16 @@
             <TabItem IsEnabled="{Binding IsIdle}">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Image Source="/Assets/Images/PS1.png" Width="16" Height="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="PS1" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <ps1:MainTab DataContext="{Binding PS1MainVM}"/>
+            </TabItem>
+
+            <TabItem IsEnabled="{Binding IsIdle}">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Image Source="/Assets/Images/Utility.png" Width="16" Height="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
                         <TextBlock Text="유틸" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -79,7 +90,7 @@
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal">
                         <Image Source="/Assets/Images/Settings.png" Width="16" Height="16" Margin="0,0,10,0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                    <TextBlock Text="설정" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="설정" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </StackPanel>
                 </TabItem.Header>
                 <controls:SettingsTab/>
