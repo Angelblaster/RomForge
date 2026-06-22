@@ -1,4 +1,5 @@
 ﻿using Microsoft.Win32;
+using NSW.WPF.Services;
 using RomForge.ViewModels._3DS;
 using System.IO;
 using System.Windows;
@@ -132,5 +133,23 @@ public partial class InstallTab : UserControl
             catch { }
 
         return files;
+    }
+
+    private void LvFiles_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (InstallListView.SelectedItems.Count == 0)
+            e.Handled = true;
+    }
+
+    private void MenuItem_OpenFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = InstallListView.SelectedItems.Cast<TitleViewModel>().ToList();
+
+        if (selected.Count == 0)
+            return;
+
+        string? dir = Path.GetDirectoryName(selected[0].FilePath);
+
+        dir?.OpenFolder();
     }
 }

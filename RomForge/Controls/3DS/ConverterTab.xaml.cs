@@ -1,5 +1,7 @@
-﻿using RomForge.ViewModels._3DS;
+﻿using NSW.WPF.Services;
+using RomForge.ViewModels._3DS;
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -57,11 +59,8 @@ public partial class ConverterTab : UserControl
         if (e.Key != Key.Delete) 
             return;
 
-        if (ViewModel == null) 
-            return;
-
         var selected = lvFiles.SelectedItems.Cast<FileItemViewModel>().ToList();
-        ViewModel.RemoveItems(selected);
+        ViewModel?.RemoveItems(selected);
     }
 
     private string? _lastSortColumn;
@@ -120,15 +119,30 @@ public partial class ConverterTab : UserControl
 
     private void BtnRemove_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel == null) 
-            return;
-
         var selected = lvFiles.SelectedItems.Cast<FileItemViewModel>().ToList();
-        ViewModel.RemoveItems(selected);
+        ViewModel?.RemoveItems(selected);
     }
 
     private void BtnClear_Click(object sender, RoutedEventArgs e)
     {
         ViewModel?.ClearItems();
+    }
+
+    private void LvFiles_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (lvFiles.SelectedItems.Count == 0)
+            e.Handled = true;
+    }
+
+    private void MenuItem_OpenFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = lvFiles.SelectedItems.Cast<FileItemViewModel>().ToList();
+
+        if (selected.Count == 0)
+            return;
+
+        string? dir = Path.GetDirectoryName(selected[0].FilePath);
+
+        dir?.OpenFolder();
     }
 }

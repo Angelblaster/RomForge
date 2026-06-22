@@ -28,7 +28,28 @@
                   KeyUp="InstallList_KeyUp"
                   HorizontalContentAlignment="Stretch"
                   IsEnabled="{Binding Install.IsNotInstalling}"
-                  Visibility="{Binding Install.ListVisibility}">
+                  Visibility="{Binding Install.ListVisibility}" 
+                  ContextMenuOpening="LvFiles_ContextMenuOpening">
+            <ListView.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="폴더 열기" Click="MenuItem_OpenFolder_Click">
+                        <MenuItem.Icon>
+                            <Image Source="/Assets/Images/AddFolder.png" Width="20" Height="20"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="선택 삭제" Click="InstallRemove_Click">
+                        <MenuItem.Icon>
+                            <Image Source="/Assets/Images/Delete.png" Width="20" Height="20"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="전체 삭제" Click="InstallClear_Click">
+                        <MenuItem.Icon>
+                            <Image Source="/Assets/Images/Clear.png" Width="20" Height="20"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </ContextMenu>
+            </ListView.ContextMenu>
 
             <ListView.Template>
                 <ControlTemplate TargetType="ListView">

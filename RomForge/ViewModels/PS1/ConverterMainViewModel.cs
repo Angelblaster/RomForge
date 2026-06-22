@@ -1,7 +1,5 @@
-﻿using _3DS.Core.Save.Models;
-using Common;
+﻿using Common;
 using Common.WPF.ViewModels;
-using LibHac.Diag;
 using NSW.WPF.Services;
 using PBP.Core.Models;
 using PBP.Core.Services;
@@ -392,6 +390,8 @@ public class ConverterMainViewModel : ToolTabViewModel
 
                 ProgressPct = 100;
                 AppendLog($"작업 완료: {targetOutputPath}", LogLevel.Ok);
+
+                Path.GetDirectoryName(targetOutputPath).OpenFolder();
             }
             catch (OperationCanceledException)
             {

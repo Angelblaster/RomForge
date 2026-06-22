@@ -1,5 +1,6 @@
 ﻿using Common;
 using Common.WPF.ViewModels;
+using NSW.WPF.Services;
 using RomForge.Core.Models.Patch;
 using RomForge.Core.Services.Patch;
 using RomForge.Models;
@@ -150,6 +151,8 @@ public class ArcadePatchMainViewModel : ToolTabViewModel
         try
         {
             await PatchService.ApplyPatchedZipAsync(SourcePath, outputZipPath, patchesByEntryName, progressReporter, Log, ct);
+
+            outputDir.OpenFolder();
 
             Log($"패치 완료: {SourcePath}", LogLevel.Ok);
         }
