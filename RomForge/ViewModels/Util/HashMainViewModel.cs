@@ -149,9 +149,6 @@ public class HashMainViewModel : ToolTabViewModel
                 {
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    //if (item.Status == "완료")
-                    //    continue;
-
                     item.Status = "대기중";
                     item.Progress = 0;
                     item.HashResult = string.Empty;
@@ -231,7 +228,9 @@ public class HashMainViewModel : ToolTabViewModel
             }
 
             using var algorithm = CreateHashAlgorithm(algoType);
-            if (algorithm == null) return string.Empty;
+
+            if (algorithm == null) 
+                return string.Empty;
 
             byte[] buffer = new byte[1024 * 64];
             long totalRead = 0;
@@ -252,7 +251,9 @@ public class HashMainViewModel : ToolTabViewModel
             }
 
             byte[]? cryptoBytes = algorithm.Hash;
-            if (cryptoBytes == null) return string.Empty;
+
+            if (cryptoBytes == null) 
+                return string.Empty;
 
             return ConvertToHexString(cryptoBytes);
         }
@@ -296,10 +297,10 @@ public class HashMainViewModel : ToolTabViewModel
     private static string ConvertToHexString(byte[] bytes)
     {
         var sb = new StringBuilder(bytes.Length * 2);
+
         foreach (byte b in bytes)
-        {
             sb.Append(b.ToString("x2"));
-        }
+
         return sb.ToString().ToUpperInvariant();
     }
 

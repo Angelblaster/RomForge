@@ -26,9 +26,7 @@ public static class PsarDiscWriter
         p1Offset = (uint)outputStream.Position;
 
         if (isMultiDisc)
-        {
             outputStream.WriteInt32(0, 0xFD);
-        }
         else
         {
             outputStream.WriteUInt32(isoSize + 0x100000, 1);

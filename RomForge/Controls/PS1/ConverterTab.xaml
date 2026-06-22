@@ -18,7 +18,27 @@
                 <ColumnDefinition Width="400"/>
             </Grid.ColumnDefinitions>
 
-            <ListView x:Name="lvFiles" Grid.Column="0" ItemsSource="{Binding FileItems}" AllowDrop="True" Drop="LvFiles_Drop" KeyUp="LvFiles_KeyUp" IsEnabled="{Binding IsUnlocked}">
+            <ListView x:Name="lvFiles" Grid.Column="0" ItemsSource="{Binding FileItems}" AllowDrop="True" Drop="LvFiles_Drop" KeyUp="LvFiles_KeyUp" IsEnabled="{Binding IsUnlocked}" ContextMenuOpening="LvFiles_ContextMenuOpening">                
+                <ListView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="폴더 열기" Click="MenuItem_OpenFolder_Click">
+                            <MenuItem.Icon>
+                                <Image Source="/Assets/Images/AddFolder.png" Width="20" Height="20"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <Separator/>
+                        <MenuItem Header="선택 삭제" Click="BtnRemove_Click">
+                            <MenuItem.Icon>
+                                <Image Source="/Assets/Images/Delete.png" Width="20" Height="20"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="전체 삭제" Click="BtnClear_Click">
+                            <MenuItem.Icon>
+                                <Image Source="/Assets/Images/Clear.png" Width="20" Height="20"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </ContextMenu>
+                </ListView.ContextMenu>
                 <ListView.View>
                     <GridView>
 

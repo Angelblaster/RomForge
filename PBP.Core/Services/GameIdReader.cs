@@ -2,6 +2,7 @@
 using CHD.Core.Interop.Enums;
 using PBP.Core.Enums;
 using PBP.Core.Models;
+using static PBP.Core.Services.Iso9660GameIdExtractor;
 
 namespace PBP.Core.Services;
 
@@ -19,7 +20,7 @@ public static class GameIdReader
         }
         catch
         {
-            return Fallback;
+            throw;
         }
     }
 
@@ -37,19 +38,29 @@ public static class GameIdReader
                 return sector;
             }
 
-            return Iso9660GameIdExtractor.Extract(SectorReader) ?? Fallback;
+            var (id, result) = Extract(SectorReader);
+
+            return result switch
+            {
+                ExtractResult.Success => id!,
+                ExtractResult.NotPs1Disc => throw new NotSupportedException("PS1 게임만 지원합니다."),
+                ExtractResult.InvalidDisc => throw new InvalidOperationException("디스크를 읽을 수 없습니다."),
+                _ => Fallback
+            };
         }
         catch
         {
-            return Fallback;
+            throw;
         }
     }
 
     private static string ReadFromFilePath(string filePath)
     {
         using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
         return ReadFromStream(stream, stream.Length);
     }
+
     private static string ReadFromChd(string filePath)
     {
         using var wrapper = new LibChdrWrapper();
@@ -71,7 +82,15 @@ public static class GameIdReader
             return sector;
         }
 
-        return Iso9660GameIdExtractor.Extract(SectorReader) ?? Fallback;
+        var (id, result) = Extract(SectorReader);
+
+        return result switch
+        {
+            ExtractResult.Success => id!,
+            ExtractResult.NotPs1Disc => throw new NotSupportedException("PS1 게임만 지원합니다."),
+            ExtractResult.InvalidDisc => throw new InvalidOperationException("디스크를 읽을 수 없습니다."),
+            _ => Fallback
+        };
     }
 
     private static uint GetTrack1FileOffset(LibChdrWrapper chd)
@@ -91,6 +110,7 @@ public static class GameIdReader
                     return (uint)pregapFrames;
             }
         }
+
         return 0u;
     }
 }

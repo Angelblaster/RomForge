@@ -1,4 +1,5 @@
-﻿using PBP.Core.Models;
+﻿using CHD.Core.Models;
+using PBP.Core.Models;
 using System.Text.RegularExpressions;
 
 namespace PBP.Core.Services;
@@ -79,6 +80,35 @@ public static class CueFileReader
         }
 
         return cueFile;
+    }
+
+    public static CueFile BuildCueFromChdInfo(ChdInfo info)
+    {
+        return new CueFile
+        {
+            FileEntries = [.. info.Tracks.Select(track => new CueFileEntry
+            {
+                FileType = "BINARY",
+                Tracks =
+                [
+                    new CueTrack
+                {
+                    Number = track.TrackNumber,
+                    DataType = track.TrackType?.ToUpperInvariant().Contains("AUDIO", StringComparison.InvariantCultureIgnoreCase) == true
+                        ? CueDataTypes.Audio
+                        : CueDataTypes.Data,
+                    Indexes =
+                    [
+                        new CueIndex
+                        {
+                            Number = 1,
+                            Position = TocBuilder.PositionFromFrames(track.PreGap)
+                        }
+                    ]
+                }
+                ]
+            })]
+        };
     }
 
     public static CueFile Parse(string content)

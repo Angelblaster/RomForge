@@ -64,7 +64,7 @@ public static class TocBuilder
     {
         CueDataTypes.Data => 0x41,
         CueDataTypes.Audio => 0x01,
-        _ => throw new ArgumentOutOfRangeException(nameof(dataType), dataType, "MODE2/2352 또는 AUDIO만 지원 가능합니다.")
+        _ => throw new NotSupportedException("PS1 게임 디스크만 지원합니다.")
     };
 
     public static byte ToBcd(int value) => (byte)((value / 10) * 0x10 + (value % 10));

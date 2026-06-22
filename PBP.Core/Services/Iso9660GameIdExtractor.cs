@@ -5,16 +5,21 @@ namespace PBP.Core.Services;
 
 public static class Iso9660GameIdExtractor
 {
-    public static string? Extract(Func<uint, byte[]> sectorReader)
+    public enum ExtractResult { Success, NotPs1Disc, InvalidDisc }
+
+    public static (string? Id, ExtractResult Result) Extract(Func<uint, byte[]> sectorReader)
     {
         var pvd = sectorReader(16);
 
         if (pvd[0] != 0x01 || pvd[1] != 'C' || pvd[2] != 'D' || pvd[3] != '0' || pvd[4] != '0' || pvd[5] != '1')
-            return null;
+            return (null, ExtractResult.InvalidDisc);
 
         var rootDirLba = BitConverter.ToUInt32(pvd, 156 + 2);
+        var id = FindSystemCnf(sectorReader, rootDirLba);
 
-        return FindSystemCnf(sectorReader, rootDirLba);
+        return id != null
+            ? (id, ExtractResult.Success)
+            : (null, ExtractResult.NotPs1Disc);
     }
 
     private static string? FindSystemCnf(Func<uint, byte[]> sectorReader, uint dirLba)

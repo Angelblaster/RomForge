@@ -4,37 +4,36 @@ namespace PBP.Core.Services;
 
 public static class CueMerger
 {
-    public static CueFile MergeBins(Stream outputStream, CueFile unmergedCue)
+    public static (Stream Stream, CueFile MergedCue) MergeStreams(CueFile unmergedCue)
     {
         var mergedEntry = new CueFileEntry { FileType = "BINARY", Tracks = [] };
         var merged = new CueFile { FileEntries = [mergedEntry] };
+        var streams = new List<Stream>();
         long currentFrame = 0;
         var basePath = Path.GetDirectoryName(unmergedCue.Path) ?? string.Empty;
 
         foreach (var entry in unmergedCue.FileEntries)
         {
             var binPath = entry.FileName;
-            var binDirectory = Path.GetDirectoryName(binPath) ?? string.Empty;
 
-            if (binDirectory == string.Empty || binDirectory.StartsWith("..") || binDirectory.StartsWith('.'))
+            if (string.IsNullOrEmpty(Path.GetDirectoryName(binPath)) || binPath.StartsWith('.'))
                 binPath = Path.Combine(basePath, entry.FileName);
 
-            using var srcStream = new FileStream(binPath, FileMode.Open, FileAccess.Read);
-
-            srcStream.CopyTo(outputStream);
+            var srcStream = new FileStream(binPath, FileMode.Open, FileAccess.Read);
+            long frameCount = srcStream.Length / 2352;
+            streams.Add(srcStream);
 
             foreach (var track in entry.Tracks)
             {
                 var newIndexes = track.Indexes
                     .Select(idx => new CueIndex { Number = idx.Number, Position = idx.Position + TocBuilder.PositionFromFrames(currentFrame) })
                     .ToList();
-
                 mergedEntry.Tracks.Add(new CueTrack { DataType = track.DataType, Number = track.Number, Indexes = newIndexes });
             }
 
-            currentFrame += srcStream.Length / 2352;
+            currentFrame += frameCount;
         }
 
-        return merged;
+        return (new ConcatenatedStream(streams), merged);
     }
 }

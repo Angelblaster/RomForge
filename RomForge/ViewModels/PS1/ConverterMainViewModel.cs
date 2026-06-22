@@ -1,5 +1,7 @@
-﻿using Common;
+﻿using _3DS.Core.Save.Models;
+using Common;
 using Common.WPF.ViewModels;
+using LibHac.Diag;
 using NSW.WPF.Services;
 using PBP.Core.Models;
 using PBP.Core.Services;
@@ -203,19 +205,9 @@ public class ConverterMainViewModel : ToolTabViewModel
         Pic1Image = PbpResources.PIC1.ToBitmapImage();
     }
 
-    public void SetIcon0FromFile(string path) => SetImage(File.ReadAllBytes(path), bytes => { _icon0Bytes = bytes; Icon0Image = bytes.ToBitmapImage(); });
-    public void SetPic0FromFile(string path) => SetImage(File.ReadAllBytes(path), bytes => { _pic0Bytes = bytes; Pic0Image = bytes.ToBitmapImage(); });
-    public void SetPic1FromFile(string path) => SetImage(File.ReadAllBytes(path), bytes => { _pic1Bytes = bytes; Pic1Image = bytes.ToBitmapImage(); });
-
     public void SetIcon0FromBytes(byte[] rawBytes) => SetImage(rawBytes, (bytes, img) => { _icon0Bytes = bytes; Icon0Image = img; }, 80, 80);
     public void SetPic0FromBytes(byte[] rawBytes) => SetImage(rawBytes, (bytes, img) => { _pic0Bytes = bytes; Pic0Image = img; }, 270, 150);
     public void SetPic1FromBytes(byte[] rawBytes) => SetImage(rawBytes, (bytes, img) => { _pic1Bytes = bytes; Pic1Image = img; }, 480, 272);
-
-    private static void SetImage(byte[] rawBytes, Action<byte[]> apply)
-    {
-        try { apply(ImageConversion.ToPng(rawBytes)); }
-        catch {  }
-    }
 
     private static void SetImage(byte[] rawBytes, Action<byte[], BitmapImage> apply, int targetWidth, int targetHeight)
     {
@@ -243,6 +235,7 @@ public class ConverterMainViewModel : ToolTabViewModel
         }
         catch
         {
+            throw;
         }
     }
 
@@ -258,10 +251,18 @@ public class ConverterMainViewModel : ToolTabViewModel
                 if (ext == ".chd")
                     return (GameIdReader.ReadFromDisk(DiskSource.FromChd(item.FilePath)), size);
 
-                using var disc = CuePreprocessor.Resolve(item.FilePath);
-                var gameId = GameIdReader.ReadFromStream(disc.IsoStream, disc.IsoLength);
+                if (ext == ".cue")
+                {
+                    var cueFile = CueFileReader.Read(item.FilePath);
+                    var binPath = CueFileResolver.GetBinPath(item.FilePath);
+                    using var stream = new FileStream(binPath, FileMode.Open, FileAccess.Read);
 
-                return (gameId, size);
+                    return (GameIdReader.ReadFromStream(stream, stream.Length), size);
+                }
+
+                using var fs = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read);
+
+                return (GameIdReader.ReadFromStream(fs, fs.Length), size);
             });
 
             item.GameId = gameId;
@@ -305,8 +306,11 @@ public class ConverterMainViewModel : ToolTabViewModel
             GameTitle = meta.Title;
 
         _lastIconGameId = primary.GameId;
-        _iconCts?.Cancel();
-        _iconCts = new CancellationTokenSource();
+
+        var old = Interlocked.Exchange(ref _iconCts, new CancellationTokenSource());
+        old?.Cancel();
+        old?.Dispose();
+
         var ct = _iconCts.Token;
 
         var icon0Png = await CoverArtFetcher.TryDownloadIconPngAsync(primary.GameId, ct);
@@ -375,14 +379,14 @@ public class ConverterMainViewModel : ToolTabViewModel
 
                 AppendLog($"작업 시작: {gameTitle} [{mainGameId}] ({orderedItems.Count}개 디스크)", LogLevel.Highlight);
 
-                var discInfos = orderedItems.Select(i =>
+                var discInfos = new List<DiscWriteInfo>();
+
+                foreach (var item in orderedItems)
                 {
-                    var resolved = RawDiscProcessor.Resolve(i.FilePath);
-
+                    var resolved = RawDiscProcessor.Resolve(item.FilePath);
                     resolvedDiscs.Add(resolved);
-
-                    return new DiscWriteInfo(resolved.IsoStream, resolved.IsoLength, mainGameId, orderedItems.Count > 1 ? $"{gameTitle} - Disc {i.No}" : gameTitle, resolved.TocData);
-                }).ToList();
+                    discInfos.Add(new DiscWriteInfo(resolved.IsoStream, resolved.IsoLength, mainGameId, orderedItems.Count > 1 ? $"{gameTitle} - Disc {item.No}" : gameTitle, resolved.TocData));
+                }
 
                 await PbpPackager.WritePbpAsync(discInfos, mainGameId, gameTitle, targetOutputPath, 9, assets, BuildProgressReporter(), _cts.Token);
 

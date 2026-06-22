@@ -1,4 +1,6 @@
-﻿using RomForge.ViewModels.PS1;
+﻿using NSW.WPF.Services;
+using RomForge.ViewModels;
+using RomForge.ViewModels.PS1;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -121,5 +123,23 @@ public partial class ConverterTab : UserControl
     private void BtnClear_Click(object sender, RoutedEventArgs e)
     {
         ViewModel?.ClearItems();
+    }
+
+    private void LvFiles_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (lvFiles.SelectedItems.Count == 0)
+            e.Handled = true;
+    }
+
+    private void MenuItem_OpenFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = lvFiles.SelectedItems.Cast<DiscFileItem>().ToList();
+
+        if (selected.Count == 0)
+            return;
+
+        string? dir = Path.GetDirectoryName(selected[0].FilePath);
+
+        dir?.OpenFolder();
     }
 }

@@ -16,17 +16,10 @@ public static class CuePreprocessor
 
         if (cueFile.FileEntries.Count > 1)
         {
-            tempDir ??= Path.GetTempPath();
+            var (stream, merged) = CueMerger.MergeStreams(cueFile);
+            var size = (uint)stream.Length;
 
-            var tempBinPath = Path.Combine(tempDir, $"{Guid.NewGuid():N}.bin");
-
-            CueFile merged;
-            using (var outputStream = new FileStream(tempBinPath, FileMode.Create, FileAccess.Write))
-                merged = CueMerger.MergeBins(outputStream, cueFile);
-
-            var size = (uint)new FileInfo(tempBinPath).Length;
-
-            return ResolvedDisc.Create(new FileStream(tempBinPath, FileMode.Open, FileAccess.Read), size, TocBuilder.BuildToc(merged, size), tempBinPath);
+            return ResolvedDisc.Create(stream, size, TocBuilder.BuildToc(merged, size));
         }
 
         var binPath = CueFileResolver.GetBinPath(inputPath);
