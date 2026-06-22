@@ -144,25 +144,31 @@ public class HashMainViewModel : ToolTabViewModel
             try
             {
                 int successCount = 0;
+                var token = _cts.Token;
 
-                foreach (var item in FileItems)
+                var parallelOptions = new ParallelOptions
                 {
-                    _cts.Token.ThrowIfCancellationRequested();
+                    MaxDegreeOfParallelism = 4,
+                    CancellationToken = token
+                };
 
+                await Parallel.ForEachAsync(FileItems, parallelOptions, async (item, cancellationToken) =>
+                {
                     item.Status = "대기중";
                     item.Progress = 0;
                     item.HashResult = string.Empty;
                     item.Status = "변환중";
-                    ScrollToItemRequested?.Invoke(item);
 
-                    string result = await Task.Run(() => ComputeHash(item, algoType, _cts.Token));
+                    Application.Current?.Dispatcher.BeginInvoke(() => ScrollToItemRequested?.Invoke(item));
+
+                    string result = await Task.Run(() => ComputeHash(item, algoType, cancellationToken), cancellationToken);
 
                     if (!string.IsNullOrEmpty(result))
                     {
                         item.HashResult = result;
                         item.Progress = 100;
                         item.Status = "완료";
-                        successCount++;
+                        Interlocked.Increment(ref successCount);
                         AppendLog($"[완료] {item.FileName} -> {result}");
                     }
                     else
@@ -171,7 +177,7 @@ public class HashMainViewModel : ToolTabViewModel
                         item.Status = "실패";
                         AppendLog($"[실패] {item.FileName} 해시 계산 오류", LogLevel.Error);
                     }
-                }
+                });
 
                 AppendLog($"작업 완료 (성공: {successCount} / 전체: {FileItems.Count})", LogLevel.Highlight);
             }
@@ -247,7 +253,12 @@ public class HashMainViewModel : ToolTabViewModel
                     algorithm.TransformBlock(buffer, 0, read, buffer, 0);
 
                 if (totalBytes > 0)
-                    item.Progress = (int)((totalRead * 100) / totalBytes);
+                {
+                    int newProgress = (int)((totalRead * 100) / totalBytes);
+
+                    if (item.Progress != newProgress)
+                        item.Progress = newProgress;
+                }
             }
 
             byte[]? cryptoBytes = algorithm.Hash;
