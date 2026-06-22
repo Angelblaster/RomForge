@@ -120,50 +120,53 @@ public class NormalPatchMainViewModel : ToolTabViewModel
             Progress = 100;
             Log($"패치 완료: {outputPath}", LogLevel.Ok);
 
+            var detected = FormatDetector.Detect(SourcePath);
+
+            if (detected.Format == RomFormat.Bin)
+            {
+                string? cuePath = Directory.GetFiles(Path.GetDirectoryName(SourcePath)!, "*.cue")
+                    .FirstOrDefault(c => ConversionSource.ParseBinsFromCue(c)
+                        .Any(b => string.Equals(Path.GetFileName(b), Path.GetFileName(SourcePath), StringComparison.OrdinalIgnoreCase)));
+
+                if (cuePath is null)
+                {
+                    Log("CUE 파일을 찾을 수 없습니다.", LogLevel.Error);
+                    return;
+                }
+
+                var sourceDir = Path.GetDirectoryName(cuePath)!;
+                var referencedBins = ConversionSource.ParseBinsFromCue(cuePath);
+
+                foreach (var binName in referencedBins)
+                {
+                    string sourceBinPath = Path.Combine(sourceDir, Path.GetFileName(binName));
+                    string targetBinPath = Path.Combine(outputDir, Path.GetFileName(binName));
+
+                    if (!string.Equals(targetBinPath, outputPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (File.Exists(sourceBinPath))
+                        {
+                            File.Copy(sourceBinPath, targetBinPath, true);
+                            copiedTrackPaths.Add(targetBinPath);
+                        }
+                        else
+                        {
+                            Log($"멀티 트랙 파일을 찾을 수 없습니다: {Path.GetFileName(sourceBinPath)}", LogLevel.Error);
+                            return;
+                        }
+                    }
+                }
+
+                outputCuePath = Path.Combine(outputDir, Path.GetFileName(cuePath));
+                File.Copy(cuePath, outputCuePath, true);
+            }
+
             if (AutoCompress)
             {
-                var detected = FormatDetector.Detect(SourcePath);
-
                 switch (detected.Format)
                 {
                     case RomFormat.Bin:
                         {
-                            string? cuePath = Directory.GetFiles(Path.GetDirectoryName(SourcePath)!, "*.cue")
-                                .FirstOrDefault(c => ConversionSource.ParseBinsFromCue(c)
-                                    .Any(b => string.Equals(Path.GetFileName(b), Path.GetFileName(SourcePath), StringComparison.OrdinalIgnoreCase)));
-
-                            if (cuePath is null)
-                            {
-                                Log("CUE 파일을 찾을 수 없습니다.", LogLevel.Error);
-                                return;
-                            }
-
-                            var sourceDir = Path.GetDirectoryName(cuePath)!;
-                            var referencedBins = ConversionSource.ParseBinsFromCue(cuePath);
-
-                            foreach (var binName in referencedBins)
-                            {
-                                string sourceBinPath = Path.Combine(sourceDir, Path.GetFileName(binName));
-                                string targetBinPath = Path.Combine(outputDir, Path.GetFileName(binName));
-
-                                if (!string.Equals(targetBinPath, outputPath, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    if (File.Exists(sourceBinPath))
-                                    {
-                                        File.Copy(sourceBinPath, targetBinPath, true);
-                                        copiedTrackPaths.Add(targetBinPath);
-                                    }
-                                    else
-                                    {
-                                        Log($"멀티 트랙 파일을 찾을 수 없습니다: {Path.GetFileName(sourceBinPath)}", LogLevel.Error);
-                                        return;
-                                    }
-                                }
-                            }
-
-                            outputCuePath = Path.Combine(outputDir, Path.GetFileName(cuePath));
-                            File.Copy(cuePath, outputCuePath, true);
-
                             ProgressStatus = "CHD 변환 중...";
                             Progress = 0;
 
@@ -171,13 +174,13 @@ public class NormalPatchMainViewModel : ToolTabViewModel
                             converter.LogMessage += (_, e) => Log(e.Message, e.Level);
                             converter.ProgressChanged += (_, e) => Progress = e.Progress;
 
-                            var chdResult = await converter.ConvertFileAsync(outputCuePath, ct);
+                            var chdResult = await converter.ConvertFileAsync(outputCuePath!, ct);
 
                             if (!chdResult.Success)
                                 throw new Exception($"CHD 변환 실패: {chdResult.Message}");
 
                             File.Delete(outputPath);
-                            File.Delete(outputCuePath);
+                            File.Delete(outputCuePath!);
                             outputCuePath = null;
 
                             foreach (var trackPath in copiedTrackPaths)
@@ -259,9 +262,7 @@ public class NormalPatchMainViewModel : ToolTabViewModel
                             }, ct);
 
                             File.Delete(outputPath);
-
                             Log($"압축 완료: {zipPath}", LogLevel.Ok);
-
                             break;
                         }
                 }

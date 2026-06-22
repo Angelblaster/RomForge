@@ -21,7 +21,7 @@ public class ChdReadStream(LibChdrWrapper wrapper, long totalLength, ChdInfo inf
         for (int i = 0; i < info.Tracks.Length; i++)
         {
             var track = info.Tracks[i];
-            bool isAudio = track.TrackType?.ToUpperInvariant().Contains("AUDIO") == true;
+            bool isAudio = track.TrackType?.ToUpperInvariant().Contains("AUDIO", StringComparison.InvariantCultureIgnoreCase) == true;
             regions[i] = new TrackRegion(current, current + track.Frames, isAudio);
             current += track.Frames;
         }

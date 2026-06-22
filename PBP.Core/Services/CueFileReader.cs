@@ -109,7 +109,7 @@ public static class CueFileReader
             entry.Tracks.Add(new CueTrack
             {
                 Number = track.TrackNumber,
-                DataType = track.TrackType?.ToUpperInvariant().Contains("AUDIO") == true
+                DataType = track.TrackType?.ToUpperInvariant().Contains("AUDIO", StringComparison.InvariantCultureIgnoreCase) == true
                     ? CueDataTypes.Audio
                     : CueDataTypes.Data,
                 Indexes = indexes
