@@ -1,0 +1,71 @@
+﻿<UserControl x:Class="RomForge.Controls.Settings.PS1SettingsTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:RomForge.Converters">
+    <TabControl>
+        <TabItem>
+            <TabItem.Header>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Source="/Assets/Images/Repack.png" Width="16" Height="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="PBP 패킹" VerticalAlignment="Center"/>
+                </StackPanel>
+            </TabItem.Header>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 압축 레벨 -->
+                <Border Grid.Row="0" Style="{StaticResource OptionBorder}" Height="Auto" Padding="12,6">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="압축 레벨" Foreground="#A0A0A0" FontSize="11" Margin="0,0,20,0"/>
+                            <TextBlock FontSize="11" Foreground="White">0: 무압축</TextBlock>
+                            <TextBlock FontSize="11" Foreground="Gray" Margin="20,0,20,0">|</TextBlock>
+                            <TextBlock FontSize="11" Foreground="#66FFAD">5: 균형</TextBlock>
+                            <TextBlock FontSize="11" Foreground="Gray" Margin="20,0,20,0">|</TextBlock>
+                            <TextBlock FontSize="11" Foreground="#FFFF33">9: 최대</TextBlock>
+                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Image Grid.Column="0" Source="/Assets/Images/Level.png" Width="24" Margin="0,0,5,0"/>
+                            <Slider Grid.Column="1" x:Name="sliderPS1" Style="{StaticResource SliderStyle}"
+                                    Minimum="0" Maximum="9" Value="{Binding CompressLevel}"
+                                    SmallChange="1" LargeChange="1" IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding ElementName=sliderPS1, Path=Value}"
+                                       Foreground="{Binding ElementName=sliderPS1, Path=Value, Converter={StaticResource LevelToColorConverter}}"
+                                       FontWeight="Bold" VerticalAlignment="Center" Width="30" TextAlignment="Center" Margin="5,0,0,0" MinWidth="45"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 출력 경로 방식 -->
+                <Border Grid.Row="2" Style="{StaticResource OptionBorder}" Height="50">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Image Grid.Column="0" Source="/Assets/Images/AddFile.png" Width="20" Margin="0,0,8,0"/>
+                        <TextBlock Grid.Column="1" Text="출력 파일" Foreground="#A0A0A0" FontSize="11" VerticalAlignment="Center"/>
+                        <Border Grid.Column="2" Width="1" Background="#3F3F46" Margin="12,8"/>
+                        <StackPanel Grid.Column="3" Orientation="Vertical" VerticalAlignment="Center" Margin="8,4">
+                            <RadioButton Content="일반 ( 원본파일명.pbp )" GroupName="PS1OutputMode" IsChecked="{Binding UseFileNameMode}" FontSize="11" Margin="0,0,0,5"/>
+                            <RadioButton Content="실기 ( 타이틀ID / EBOOT.PBP )" GroupName="PS1OutputMode" IsChecked="{Binding UseGameIdMode}" FontSize="11"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+            </Grid>
+        </TabItem>
+    </TabControl>
+</UserControl>

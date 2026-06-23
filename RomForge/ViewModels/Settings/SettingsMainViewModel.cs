@@ -5,7 +5,10 @@ namespace RomForge.ViewModels.Settings;
 
 public class SettingsMainViewModel(AppConfig config) : ToolTabViewModel
 {
-    public PatchSettingsMainViewModel Patch { get; } = new PatchSettingsMainViewModel(config);
+    public PatchSettingsMainViewModel Patch { get; } = new(config);
 
-    public CompressSettingsMainViewModel Compress { get; } = new CompressSettingsMainViewModel(config);
+    public CompressSettingsMainViewModel Compress { get; } = new(config);
+
+    public PS1SettingsMainViewModel PS1 { get; } = new(config);
+
 }

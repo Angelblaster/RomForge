@@ -1,0 +1,17 @@
+﻿<UserControl x:Class="RomForge.Controls.Settings.PatchSettingsTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:RomForge.Converters">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <ToggleButton Grid.Row="0" Style="{StaticResource ToggleStyle}"
+                      IsChecked="{Binding AutoCompress}">
+            <StackPanel Orientation="Horizontal">
+                <Image Width="18" Margin="0,0,10,0" Source="{Binding AutoCompress, Converter={StaticResource BoolToImageConverter}}"/>
+                <TextBlock Text="패치 후 자동 압축 ( BIN/ISO→CHD, GCM/Wii/WBFS→RVZ, 이외 기타→ZIP )" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+        </ToggleButton>
+    </Grid>
+</UserControl>

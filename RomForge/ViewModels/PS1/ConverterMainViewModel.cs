@@ -3,6 +3,7 @@ using Common.WPF.ViewModels;
 using NSW.WPF.Services;
 using PBP.Core.Models;
 using PBP.Core.Services;
+using RomForge.Core;
 using RomForge.Core.Services.PS1;
 using RomForge.Helpers;
 using RomForge.Models;
@@ -29,7 +30,7 @@ public class ConverterMainViewModel : ToolTabViewModel
     private string? _lastIconGameId;
     private CancellationTokenSource? _iconCts;
 
-    private string _gameTitle;
+    private string _gameTitle = string.Empty;
     public string GameTitle
     {
         get => _gameTitle;
@@ -41,6 +42,7 @@ public class ConverterMainViewModel : ToolTabViewModel
     private string _progressPercent = "0%";
     private string _progressTime = string.Empty;
     private string _progressSpeed = string.Empty;
+    private readonly AppConfig _config;
 
     public int ProgressPct
     {
@@ -99,8 +101,9 @@ public class ConverterMainViewModel : ToolTabViewModel
     public byte[] Pic0Bytes { get => _pic0Bytes; set => _pic0Bytes = value; }
     public byte[] Pic1Bytes { get => _pic1Bytes; set => _pic1Bytes = value; }
 
-    public ConverterMainViewModel()
+    public ConverterMainViewModel(AppConfig config)
     {
+        _config = config;
         RunCommand = new RelayCommand(async _ => await RunAsync(), _ => !IsLocked && FileItems.Count > 0);
         CancelCommand = new RelayCommand(_ => _cts.Cancel(), _ => IsLocked);
 
@@ -212,32 +215,25 @@ public class ConverterMainViewModel : ToolTabViewModel
 
     private static void SetImage(byte[] rawBytes, Action<byte[], BitmapImage> apply, int targetWidth, int targetHeight)
     {
-        try
+        using var image = Image.Load<SixLabors.ImageSharp.PixelFormats.Bgra32>(rawBytes);
+        image.Mutate(x => x.Resize(targetWidth, targetHeight));
+
+        using var ms = new MemoryStream();
+        image.SaveAsPng(ms, new SixLabors.ImageSharp.Formats.Png.PngEncoder
         {
-            using var image = Image.Load<SixLabors.ImageSharp.PixelFormats.Bgra32>(rawBytes);
-            image.Mutate(x => x.Resize(targetWidth, targetHeight));
+            CompressionLevel = SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.BestCompression
+        });
+        byte[] finalBytes = ms.ToArray();
 
-            using var ms = new MemoryStream();
-            image.SaveAsPng(ms, new SixLabors.ImageSharp.Formats.Png.PngEncoder
-            {
-                CompressionLevel = SixLabors.ImageSharp.Formats.Png.PngCompressionLevel.BestCompression
-            });
-            byte[] finalBytes = ms.ToArray();
+        ms.Position = 0;
+        var bitmapImage = new BitmapImage();
+        bitmapImage.BeginInit();
+        bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+        bitmapImage.StreamSource = ms;
+        bitmapImage.EndInit();
+        bitmapImage.Freeze();
 
-            ms.Position = 0;
-            var bitmapImage = new BitmapImage();
-            bitmapImage.BeginInit();
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapImage.StreamSource = ms;
-            bitmapImage.EndInit();
-            bitmapImage.Freeze();
-
-            apply(finalBytes, bitmapImage);
-        }
-        catch
-        {
-            throw;
-        }
+        apply(finalBytes, bitmapImage);
     }
 
     private async Task LoadItemInfoAsync(DiscFileItem item)
@@ -280,7 +276,10 @@ public class ConverterMainViewModel : ToolTabViewModel
 
     private void ResortAndRenumber()
     {
-        var sorted = FileItems.OrderBy(i => i.GameId, StringComparer.OrdinalIgnoreCase).ToList();
+        var sorted = FileItems
+            .OrderBy(i => i.GameId is "인식중..." or "인식실패" ? 1 : 0)
+            .ThenBy(i => i.GameId, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         for (var i = 0; i < sorted.Count; i++)
         {
@@ -296,44 +295,42 @@ public class ConverterMainViewModel : ToolTabViewModel
 
     private async Task UpdateImageAsync()
     {
-        var primary = FileItems.FirstOrDefault(i => i.No == 1);
+        try
+        {
+            var primary = FileItems.FirstOrDefault(i => i.No == 1);
 
-        if (primary == null || primary.GameId == _lastIconGameId || primary.GameId is "인식중..." or "인식실패")
-            return;
+            if (primary == null || primary.GameId == _lastIconGameId || primary.GameId is "인식중..." or "인식실패")
+                return;
 
-        var meta = GameMetadataLookup.Find(primary.GameId);
+            var meta = GameMetadataLookup.Find(primary.GameId);
 
-        if (meta != null && !string.IsNullOrWhiteSpace(meta.Title))
-            GameTitle = meta.Title;
+            if (meta != null && !string.IsNullOrWhiteSpace(meta.Title))
+                GameTitle = meta.Title;
 
-        _lastIconGameId = primary.GameId;
+            _lastIconGameId = primary.GameId;
 
-        var old = Interlocked.Exchange(ref _iconCts, new CancellationTokenSource());
-        old?.Cancel();
-        old?.Dispose();
+            var old = Interlocked.Exchange(ref _iconCts, new CancellationTokenSource());
+            old?.Cancel();
+            old?.Dispose();
 
-        var ct = _iconCts.Token;
+            var ct = _iconCts.Token;
 
-        var icon0Png = await CoverArtFetcher.TryDownloadIconPngAsync(primary.GameId, ct);
+            var icon0Png = await CoverArtFetcher.TryDownloadIconPngAsync(primary.GameId, ct);
+            ct.ThrowIfCancellationRequested();
+            Icon0Bytes = icon0Png ?? PbpResources.ICON0;
+            Icon0Image = Icon0Bytes.ToBitmapImage();
 
-        ct.ThrowIfCancellationRequested();
+            var pic0Png = meta != null ? await GameMetadataLookup.TryDownloadImagePngAsync(meta.Pic0, ct) : null;
+            ct.ThrowIfCancellationRequested();
+            Pic0Bytes = pic0Png ?? PbpResources.PIC0;
+            Pic0Image = Pic0Bytes.ToBitmapImage();
 
-        Icon0Bytes = icon0Png ?? PbpResources.ICON0;        
-        Icon0Image = Icon0Bytes.ToBitmapImage();
-
-        var pic0Png = meta != null ? await GameMetadataLookup.TryDownloadImagePngAsync(meta.Pic0, ct) : null;
-
-        ct.ThrowIfCancellationRequested();
-
-        Pic0Bytes = pic0Png ?? PbpResources.PIC0;
-        Pic0Image = Pic0Bytes.ToBitmapImage();
-
-        var pic1Png = meta != null ? await GameMetadataLookup.TryDownloadImagePngAsync(meta.Pic1, ct) : null;
-
-        ct.ThrowIfCancellationRequested();
-
-        Pic1Bytes = pic1Png ?? PbpResources.PIC1;
-        Pic1Image = Pic1Bytes.ToBitmapImage();
+            var pic1Png = meta != null ? await GameMetadataLookup.TryDownloadImagePngAsync(meta.Pic1, ct) : null;
+            ct.ThrowIfCancellationRequested();
+            Pic1Bytes = pic1Png ?? PbpResources.PIC1;
+            Pic1Image = Pic1Bytes.ToBitmapImage();
+        }
+        catch (OperationCanceledException) { }
     }
 
     private async Task RunAsync()
@@ -368,14 +365,26 @@ public class ConverterMainViewModel : ToolTabViewModel
             };
 
             string baseDirectory = Path.GetDirectoryName(orderedItems[0].FilePath)!;
-            string gameDirectory = Path.Combine(baseDirectory, mainGameId);
-            string targetOutputPath = Path.Combine(gameDirectory, "eboot.pbp");
+
+            string targetOutputPath;
+            string? gameDirectory = null;
+
+            if (_config.PS1.UseGameIdMode)
+            {
+                gameDirectory = Path.Combine(baseDirectory, mainGameId);
+                targetOutputPath = Path.Combine(gameDirectory, "EBOOT.PBP");
+            }
+            else
+            {
+                var safeTitle = string.Concat(gameTitle.Split(Path.GetInvalidFileNameChars()));
+                targetOutputPath = Path.Combine(baseDirectory, safeTitle + ".pbp");
+            }
 
             var resolvedDiscs = new List<ResolvedDisc>();
 
             try
             {
-                if (!Directory.Exists(gameDirectory))
+                if (gameDirectory != null && !Directory.Exists(gameDirectory))
                     Directory.CreateDirectory(gameDirectory);
 
                 AppendLog($"작업 시작: {gameTitle} [{mainGameId}] ({orderedItems.Count}개 디스크)", LogLevel.Highlight);
@@ -389,7 +398,7 @@ public class ConverterMainViewModel : ToolTabViewModel
                     discInfos.Add(new DiscWriteInfo(resolved.IsoStream, resolved.IsoLength, mainGameId, orderedItems.Count > 1 ? $"{gameTitle} - Disc {item.No}" : gameTitle, resolved.TocData));
                 }
 
-                await PbpPackager.WritePbpAsync(discInfos, mainGameId, gameTitle, targetOutputPath, 9, assets, BuildProgressReporter(), _cts.Token);
+                await PbpPackager.WritePbpAsync(discInfos, mainGameId, gameTitle, targetOutputPath, _config.PS1.CompressLevel, assets, BuildProgressReporter(), _cts.Token);
 
                 ProgressPct = 100;
                 AppendLog($"작업 완료: {targetOutputPath}", LogLevel.Ok);

@@ -1,4 +1,5 @@
 ﻿using Common.WPF.ViewModels;
+using RomForge.Core;
 using RomForge.Models;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -25,9 +26,9 @@ public class PS1MainViewModel : ToolTabViewModel
 
     public ObservableCollection<LogEntry> LogEntries { get; } = [];
 
-    public PS1MainViewModel()
+    public PS1MainViewModel(AppConfig config)
     {
-        ConverterVM = new ConverterMainViewModel();
+        ConverterVM = new ConverterMainViewModel(config);
 
         RegisterChild(ConverterVM);
 

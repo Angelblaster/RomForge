@@ -61,7 +61,7 @@ public class MainViewModel : ToolTabViewModel
         CompressVM = new CompressMainViewModel(_config);
         SwitchMainVM = new SwitchMainViewModel(_config);
         Main3DsVM = new _3DSMainViewModel();
-        PS1MainVM = new PS1MainViewModel();
+        PS1MainVM = new PS1MainViewModel(_config);
         UtilMainVM = new UtilMainViewModel();
         Settings = new SettingsMainViewModel(_config);
 

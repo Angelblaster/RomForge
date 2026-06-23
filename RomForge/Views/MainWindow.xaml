@@ -7,6 +7,7 @@
         xmlns:_3ds="clr-namespace:RomForge.Controls._3DS"
         xmlns:ps1="clr-namespace:RomForge.Controls.PS1"
         xmlns:util="clr-namespace:RomForge.Controls.Util"
+        xmlns:settings="clr-namespace:RomForge.Controls.Settings"
         xmlns:vm="clr-namespace:RomForge.ViewModels"
         xmlns:helpers="clr-namespace:RomForge.Helpers"
         Title="{Binding AppVersion}"
@@ -70,7 +71,7 @@
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Image Source="/Assets/Images/PS1.png" Width="16" Height="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="PS1" VerticalAlignment="Center"/>
+                        <TextBlock Text="PSX" VerticalAlignment="Center"/>
                     </StackPanel>
                 </TabItem.Header>
                 <ps1:MainTab DataContext="{Binding PS1MainVM}"/>
@@ -93,7 +94,7 @@
                         <TextBlock Text="설정" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </StackPanel>
                 </TabItem.Header>
-                <controls:SettingsTab/>
+                <settings:SettingsTab DataContext="{Binding Settings}"/>
             </TabItem>
 
         </TabControl>

@@ -5,6 +5,16 @@ using System.Text.Json;
 
 namespace RomForge.Core;
 
+public class PatchConfig : ViewModelBase
+{
+    private bool _autoCompress;
+    public bool AutoCompress
+    {
+        get => _autoCompress;
+        set { SetProperty(ref _autoCompress, value); }
+    }
+}
+
 public class SwitchConfig : ViewModelBase
 {
     private int _compressLevel = 18;
@@ -35,20 +45,25 @@ public class DolphinConfig : ViewModelBase
     public int CompressLevel { get => _compressLevel; set => SetProperty(ref _compressLevel, value); }
 }
 
-public class PatchConfig : ViewModelBase
+public class PS1Config : ViewModelBase
 {
-    private bool _autoCompress;
-    public bool AutoCompress
-    {
-        get => _autoCompress;
-        set { SetProperty(ref _autoCompress, value); }
-    }
+    private int _compressLevel = 9;
+    public int CompressLevel { get => _compressLevel; set => SetProperty(ref _compressLevel, value); }
+
+    private bool _useGameIdMode = false;
+    public bool UseGameIdMode { get => _useGameIdMode; set => SetProperty(ref _useGameIdMode, value); }
+
+    private bool _useFileNameMode = true;
+    public bool UseFileNameMode { get => _useFileNameMode; set => SetProperty(ref _useFileNameMode, value); }
 }
 
 public class AppConfig : ViewModelBase
 {
     private static readonly string DefaultFilePath = Path.ChangeExtension(Environment.ProcessPath!, "config.json");
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
+    private PatchConfig _patch = new();
+    public PatchConfig Patch { get => _patch; set => SetProperty(ref _patch, value); }
 
     private SwitchConfig _switch = new();
     public SwitchConfig Switch { get => _switch; set => SetProperty(ref _switch, value); }
@@ -59,8 +74,8 @@ public class AppConfig : ViewModelBase
     private DolphinConfig _dolphin = new();
     public DolphinConfig Dolphin { get => _dolphin; set => SetProperty(ref _dolphin, value); }
 
-    private PatchConfig _patch = new();
-    public PatchConfig Patch { get => _patch; set => SetProperty(ref _patch, value); }
+    private PS1Config _ps1 = new();
+    public PS1Config PS1 { get => _ps1; set => SetProperty(ref _ps1, value); }
 
     public AppConfig Load()
     {
@@ -70,10 +85,11 @@ public class AppConfig : ViewModelBase
             var loaded = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(DefaultFilePath));
             if (loaded != null)
             {
+                Patch = loaded.Patch ?? new();
                 Switch = loaded.Switch ?? new();
                 Azahar = loaded.Azahar ?? new();
-                Dolphin = loaded.Dolphin ?? new();
-                Patch = loaded.Patch ?? new();
+                Dolphin = loaded.Dolphin ?? new();                
+                PS1 = loaded.PS1 ?? new();
             }
 
             SubscribeToChanges();
@@ -90,6 +106,7 @@ public class AppConfig : ViewModelBase
         Azahar.PropertyChanged += AutoSave;
         Dolphin.PropertyChanged += AutoSave;
         Patch.PropertyChanged += AutoSave;
+        PS1.PropertyChanged += AutoSave;
     }
 
     public void Save() => File.WriteAllText(DefaultFilePath, JsonSerializer.Serialize(this, JsonOptions));
