@@ -1,4 +1,5 @@
 ﻿using RomForge.Helpers;
+using RomForge.ViewModels.Patch;
 using System.Windows.Input;
 
 namespace RomForge.ViewModels.Patch;
@@ -15,20 +16,29 @@ public class PatchMainViewModel : MultiToolTabViewModel
     public ICommand CancelCommand { get; }
     public ICommand ClearCommand { get; }
     public ICommand CalculateHashCommand { get; }
+
+    private IPatchViewModel? SelectedPatchVM => SelectedTool as IPatchViewModel;
+
     public PatchMainViewModel(Core.AppConfig config, Action<string> navigateToHashAction)
     {
         _config = config;
         _navigateToHashAction = navigateToHashAction;
-        NormalVM = new NormalPatchMainViewModel(_config);
 
-        ArcadeVM = new ArcadePatchMainViewModel();        
+        NormalVM = new NormalPatchMainViewModel(_config);
+        ArcadeVM = new ArcadePatchMainViewModel();
 
         RunCommand = new RelayCommand(async _ => await RunAsync());
         CancelCommand = new RelayCommand(_ => Cancel());
         ClearCommand = new RelayCommand(_ => Clear());
+
         CalculateHashCommand = new RelayCommand(
-            execute: _ => _navigateToHashAction?.Invoke(NormalVM.SourcePath),
-            canExecute: _ => !string.IsNullOrEmpty(NormalVM.SourcePath) && _navigateToHashAction != null
+            execute: _ =>
+            {
+                var path = SelectedPatchVM?.SourcePath;
+                if (!string.IsNullOrEmpty(path))
+                    _navigateToHashAction?.Invoke(path);
+            },
+            canExecute: _ => !string.IsNullOrEmpty(SelectedPatchVM?.SourcePath) && _navigateToHashAction != null
         );
 
         Tools.Add(NormalVM);
@@ -41,41 +51,12 @@ public class PatchMainViewModel : MultiToolTabViewModel
     {
         using (BeginWork())
         {
-            switch (SubTabIndex)
-            {
-                case 0:
-                    await NormalVM.RunAsync();
-                    break;
-                case 1:
-                    await ArcadeVM.RunAsync();
-                    break;
-            }
+            if (SelectedPatchVM != null)
+                await SelectedPatchVM.RunAsync();
         }
     }
 
-    private void Cancel()
-    {
-        switch (SubTabIndex)
-        {
-            case 0:
-                NormalVM.Cancel();
-                break;
-            case 1:
-                ArcadeVM.Cancel();
-                break;
-        }
-    }
+    private void Cancel() => SelectedPatchVM?.Cancel();
 
-    private void Clear()
-    {
-        switch (SubTabIndex)
-        {
-            case 0:
-                NormalVM.Clear();
-                break;
-            case 1:
-                ArcadeVM.Clear();
-                break;
-        }
-    }
+    private void Clear() => SelectedPatchVM?.Clear();
 }

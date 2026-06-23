@@ -26,6 +26,8 @@ public abstract class MultiToolTabViewModel : ToolTabViewModel
 
     public List<ToolTabViewModel> Tools => _tools;
 
+    public ToolTabViewModel? SelectedTool => (SubTabIndex >= 0 && SubTabIndex < _tools.Count) ? _tools[SubTabIndex] : null;
+
     protected void InitializeMultiTools()
     {
         foreach (var tool in _tools)

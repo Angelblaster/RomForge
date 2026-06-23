@@ -14,7 +14,7 @@ using System.Windows.Input;
 
 namespace RomForge.ViewModels.Patch;
 
-public class NormalPatchMainViewModel : ToolTabViewModel
+public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
 {
     private readonly Core.AppConfig _config;
     private CancellationTokenSource? _runCts;

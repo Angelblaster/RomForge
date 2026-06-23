@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using LibHac.Tools.Fs;
+using Microsoft.Win32;
 using RomForge.Core.Models.Patch;
 using RomForge.ViewModels;
 using RomForge.ViewModels.Patch;
@@ -25,19 +26,16 @@ public partial class PatchTab : UserControl
         InitializeComponent();
     }
 
-    private static string? OpenSingleFileDialog(string title)
-    {
-        var dlg = new OpenFileDialog { Title = title };
-
-        return dlg.ShowDialog() == true ? dlg.FileName : null;
-    }
 
     private void NormalSourceDrop_Click(object sender, MouseButtonEventArgs e)
     {
-        var path = OpenSingleFileDialog("원본 파일 선택");
+        var dlg = new OpenFileDialog
+        {
+            Title = "원본 파일 선택",
+        };
 
-        if (path != null)
-            ViewModel.PatchVM.NormalVM.SourcePath = path;
+        if (dlg.ShowDialog() == true)
+            ViewModel.PatchVM.NormalVM.SourcePath = dlg.FileName;
     }
 
     private void NormalSourceDrop_Drop(object sender, DragEventArgs e)
@@ -72,10 +70,14 @@ public partial class PatchTab : UserControl
 
     private void ArcadeSourceDrop_Click(object sender, MouseButtonEventArgs e)
     {
-        var path = OpenSingleFileDialog("원본 ZIP 선택");
+        var dlg = new OpenFileDialog
+        {
+            Title = "원본 ZIP 선택",
+            Filter = "ZIP 파일|*.zip|모든 파일|*.*"
+        };
 
-        if (path != null)
-            ViewModel.PatchVM.ArcadeVM.SourcePath = path;
+        if(dlg.ShowDialog() == true)
+            ViewModel.PatchVM.ArcadeVM.SourcePath = dlg.FileName;            
     }
 
     private void ArcadeSourceDrop_Drop(object sender, DragEventArgs e)

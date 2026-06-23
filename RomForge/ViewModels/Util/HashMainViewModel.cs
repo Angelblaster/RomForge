@@ -132,22 +132,21 @@ public class HashMainViewModel : ToolTabViewModel
                 int successCount = 0;
                 var token = _cts.Token;
 
-                var parallelOptions = new ParallelOptions
+                await Parallel.ForEachAsync(FileItems, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = token }, async (item, ct) =>
                 {
-                    MaxDegreeOfParallelism = 4,
-                    CancellationToken = token
-                };
-
-                await Parallel.ForEachAsync(FileItems, parallelOptions, async (item, cancellationToken) =>
-                {
-                    item.Status = "대기중";
+                    item.Status = "변환중";
                     item.Progress = 0;
                     item.HashResult = string.Empty;
-                    item.Status = "변환중";
 
                     Application.Current?.Dispatcher.BeginInvoke(() => ScrollToItemRequested?.Invoke(item));
 
-                    string result = await Task.Run(() => ComputeHash(item, algoType, cancellationToken), cancellationToken);
+                    if (ct.IsCancellationRequested) 
+                        return;
+
+                    string result = await Task.Run(() => ComputeHash(item, algoType, ct), ct);
+
+                    if (ct.IsCancellationRequested) 
+                        return;
 
                     if (!string.IsNullOrEmpty(result))
                     {
@@ -159,7 +158,6 @@ public class HashMainViewModel : ToolTabViewModel
                     }
                     else
                     {
-                        item.Progress = 0;
                         item.Status = "실패";
                         AppendLog($"[실패] {item.FileName} 해시 계산 오류", LogLevel.Error);
                     }
@@ -170,7 +168,8 @@ public class HashMainViewModel : ToolTabViewModel
             catch (OperationCanceledException)
             {
                 AppendLog("작업이 취소되었습니다.", LogLevel.Error);
-                foreach (var item in FileItems.Where(i => i.Status == "대기중" || i.Status == "변환중"))
+
+                foreach (var item in FileItems.Where(i => i.Status == "변환중" || i.Status == "대기중"))
                 {
                     item.Status = "취소";
                     item.Progress = 0;
@@ -179,8 +178,6 @@ public class HashMainViewModel : ToolTabViewModel
             catch (Exception ex)
             {
                 AppendLog($"오류 발생: {ex.Message}", LogLevel.Error);
-                foreach (var item in FileItems.Where(i => i.Status == "변환중"))
-                    item.Status = "실패";
             }
             finally
             {
@@ -203,16 +200,20 @@ public class HashMainViewModel : ToolTabViewModel
             if (algoType == HashAlgorithmType.CRC32)
             {
                 var crc = new System.IO.Hashing.Crc32();
+
                 return ProcessNonCryptoStream(fs, totalBytes, item, (buf, len) => crc.Append(new ReadOnlySpan<byte>(buf, 0, len)), () =>
                 {
                     byte[] hashBytes = crc.GetHashAndReset();
+
                     return BitConverter.ToUInt32([.. hashBytes.Reverse()], 0).ToString("X8");
+
                 }, token);
             }
 
             if (algoType == HashAlgorithmType.BLAKE3)
             {
                 using var hasher = Blake3.Hasher.New();
+
                 return ProcessNonCryptoStream(fs, totalBytes, item, (buf, len) => hasher.Update(new ReadOnlySpan<byte>(buf, 0, len)), () =>
                 {
                     return hasher.Finalize().ToString().ToUpperInvariant();

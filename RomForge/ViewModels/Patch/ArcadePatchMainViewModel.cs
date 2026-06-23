@@ -12,7 +12,7 @@ using System.Windows;
 
 namespace RomForge.ViewModels.Patch;
 
-public class ArcadePatchMainViewModel : ToolTabViewModel
+public class ArcadePatchMainViewModel : ToolTabViewModel, IPatchViewModel
 {
     public ObservableCollection<LogEntry> LogEntries { get; } = [];
 
