@@ -22,18 +22,18 @@ public partial class MainWindow : Window
 
 
 
-        var unpacker = new PbpUnpacker
-        {
-            OnNotify = msg => Debug.WriteLine(msg),
-            OnProgress = bytes => Debug.WriteLine($"{bytes} bytes written")
-        };
+        //var unpacker = new PbpUnpacker
+        //{
+        //    OnNotify = msg => Debug.WriteLine(msg),
+        //    OnProgress = bytes => Debug.WriteLine($"{bytes} bytes written")
+        //};
 
-        unpacker.Unpack(
-            pbpPath: @"\\CDH5\download\게임\한글패치\멀트트랙\SLPS00600\RAGE RACER.pbp",
-            outputDir: @"D:\",
-            createCuesheet: true,
-            cancellationToken: CancellationToken.None
-        );
+        //unpacker.Unpack(
+        //    pbpPath: @"\\CDH5\download\게임\한글패치\멀트트랙\SLPS00600\c_eboot.pbp",
+        //    outputDir: @"D:\",
+        //    createCuesheet: true,
+        //    cancellationToken: CancellationToken.None
+        //);
 
     }
 

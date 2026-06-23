@@ -29,6 +29,8 @@ public class HashFileItem : ViewModelBase
         set { _status = value; OnPropertyChanged(); }
     }
 
+    public string RawHash { get; set; }
+
     public string HashResult
     {
         get => _hashResult;

@@ -19,14 +19,18 @@
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Assets\Images\CUE.png" />
+    <None Remove="Assets\Images\FontSize.png" />
     <None Remove="Assets\Images\Hash.png" />
     <None Remove="Assets\Images\Keygen.png" />
     <None Remove="Assets\Images\Left.png" />
+    <None Remove="Assets\Images\LowerA.png" />
+    <None Remove="Assets\Images\Neural.png" />
     <None Remove="Assets\Images\OpenFolder.png" />
     <None Remove="Assets\Images\Repack.png" />
     <None Remove="Assets\Images\Right.png" />
     <None Remove="Assets\Images\Split.png" />
     <None Remove="Assets\Images\Unpack.png" />
+    <None Remove="Assets\Images\UpperA.png" />
     <None Remove="Assets\Images\WorkSpace.png" />
   </ItemGroup>
   <ItemGroup>
@@ -37,16 +41,20 @@
     <Resource Include="Assets\Images\Cartridge.png" />
     <Resource Include="Assets\Images\Convert.png" />
     <Resource Include="Assets\Images\CUE.png" />
+    <Resource Include="Assets\Images\FontSize.png" />
     <Resource Include="Assets\Images\Hash.png" />
     <Resource Include="Assets\Images\HDD.png" />
     <Resource Include="Assets\Images\Keygen.png" />
     <Resource Include="Assets\Images\Left.png" />
+    <Resource Include="Assets\Images\LowerA.png" />
+    <Resource Include="Assets\Images\Neural.png" />
     <Resource Include="Assets\Images\OpenFolder.png" />
     <Resource Include="Assets\Images\Repack.png" />
     <Resource Include="Assets\Images\Right.png" />
     <Resource Include="Assets\Images\SD.png" />
     <Resource Include="Assets\Images\Split.png" />
     <Resource Include="Assets\Images\Unpack.png" />
+    <Resource Include="Assets\Images\UpperA.png" />
     <Resource Include="Assets\Images\WorkSpace.png" />
     <Resource Include="Assets\Images\WriteTab.png" />
     <Resource Include="Assets\Images\DLC.png" />

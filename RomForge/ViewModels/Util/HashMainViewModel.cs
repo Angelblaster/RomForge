@@ -19,6 +19,21 @@ public class HashMainViewModel : ToolTabViewModel
     private HashAlgorithmType _selectedAlgorithm = HashAlgorithmType.MD5;
     private CancellationTokenSource _cts = new();
 
+    private bool _useUpperCase = true;
+
+    public bool UseUpperCase
+    {
+        get => _useUpperCase;
+        set
+        {
+            if (_useUpperCase == value) return;
+            _useUpperCase = value;
+            OnPropertyChanged();
+
+            ApplyHashCase();
+        }
+    }
+
     #endregion
 
     #region Collections
@@ -106,10 +121,7 @@ public class HashMainViewModel : ToolTabViewModel
         OnPropertyChanged(nameof(HintVisibility));
     }
 
-    public static string GetFileDialogFilter()
-    {
-        return "모든 파일|*.*";
-    }
+    public static string GetFileDialogFilter() => "모든 파일|*.*";
 
     #endregion
 
@@ -136,6 +148,7 @@ public class HashMainViewModel : ToolTabViewModel
                 {
                     item.Status = "변환중";
                     item.Progress = 0;
+                    item.RawHash = string.Empty;
                     item.HashResult = string.Empty;
 
                     Application.Current?.Dispatcher.BeginInvoke(() => ScrollToItemRequested?.Invoke(item));
@@ -150,7 +163,8 @@ public class HashMainViewModel : ToolTabViewModel
 
                     if (!string.IsNullOrEmpty(result))
                     {
-                        item.HashResult = result;
+                        item.RawHash = result;
+                        item.HashResult = FormatHex(result);
                         item.Progress = 100;
                         item.Status = "완료";
                         Interlocked.Increment(ref successCount);
@@ -187,7 +201,7 @@ public class HashMainViewModel : ToolTabViewModel
         }
     }
 
-    private static string ComputeHash(HashFileItem item, HashAlgorithmType algoType, CancellationToken token)
+    private string ComputeHash(HashFileItem item, HashAlgorithmType algoType, CancellationToken token)
     {
         try
         {
@@ -205,8 +219,7 @@ public class HashMainViewModel : ToolTabViewModel
                 {
                     byte[] hashBytes = crc.GetHashAndReset();
 
-                    return BitConverter.ToUInt32([.. hashBytes.Reverse()], 0).ToString("X8");
-
+                    return FormatHex(BitConverter.ToUInt32([.. hashBytes.Reverse()], 0).ToString("X8"));
                 }, token);
             }
 
@@ -216,7 +229,7 @@ public class HashMainViewModel : ToolTabViewModel
 
                 return ProcessNonCryptoStream(fs, totalBytes, item, (buf, len) => hasher.Update(new ReadOnlySpan<byte>(buf, 0, len)), () =>
                 {
-                    return hasher.Finalize().ToString().ToUpperInvariant();
+                    return FormatHex(hasher.Finalize().ToString());
                 }, token);
             }
 
@@ -253,7 +266,7 @@ public class HashMainViewModel : ToolTabViewModel
             if (cryptoBytes == null) 
                 return string.Empty;
 
-            return ConvertToHexString(cryptoBytes);
+            return FormatHex(ConvertToHexString(cryptoBytes));
         }
         catch
         {
@@ -299,7 +312,7 @@ public class HashMainViewModel : ToolTabViewModel
         foreach (byte b in bytes)
             sb.Append(b.ToString("x2"));
 
-        return sb.ToString().ToUpperInvariant();
+        return sb.ToString();
     }
 
     private static IEnumerable<string> ExpandPaths(IEnumerable<string> paths)
@@ -337,6 +350,19 @@ public class HashMainViewModel : ToolTabViewModel
             return;
 
         Application.Current.Dispatcher.Invoke(() => LogEntries.Clear());
+    }
+
+    private string FormatHex(string hex) => UseUpperCase ? hex.ToUpperInvariant() : hex.ToLowerInvariant();
+
+    private void ApplyHashCase()
+    {
+        foreach (var item in FileItems)
+        {
+            if (string.IsNullOrEmpty(item.RawHash))
+                continue;
+
+            item.HashResult = FormatHex(item.RawHash);
+        }
     }
 
     #endregion

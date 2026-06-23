@@ -1,5 +1,6 @@
 ﻿using CHD.Core.Models;
 using PBP.Core.Models;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace PBP.Core.Services;
@@ -116,6 +117,8 @@ public static class CueFileReader
             });
 
             currentFrame += track.Frames;
+
+            System.Diagnostics.Debug.WriteLine($"TrackNumber:{track.TrackNumber}/Frames:{track.Frames}/PreGap{track.PreGap}/{((track.Frames + 3) / 4) * 4}");
         }
 
         return new CueFile { FileEntries = [entry] };
