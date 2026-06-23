@@ -52,7 +52,7 @@ public partial class InstallTab : UserControl
         var dialog = new OpenFileDialog
         {
             Title = "설치할 파일 선택",
-            Filter = "3DS 파일|*.cia;*.3ds;*.cci;*.zcci|모든 파일|*.*",
+            Filter = InstallMainViewModel.GetFileDialogFilter(),
             Multiselect = true
         };
 
@@ -64,19 +64,14 @@ public partial class InstallTab : UserControl
 
     private async void InstallAddFolder_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog
+        var dialog = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog
         {
-            Title = "폴더 선택 (폴더 안의 아무 파일이나 선택)",
-            CheckFileExists = false,
-            FileName = "폴더 선택"
+            Description = "추가할 폴더를 선택하세요",
+            UseDescriptionForTitle = true
         };
 
-        if (dialog.ShowDialog() != true) 
-            return;
-
-        string folder = Path.GetDirectoryName(dialog.FileName)!;
-
-        await Vm.Install.AddFiles(GetFilesSafe(folder));
+        if (dialog.ShowDialog() == true)
+            await Vm.Install.AddFiles(GetFilesSafe(dialog.SelectedPath));
     }
 
     private void InstallRemove_Click(object sender, RoutedEventArgs e) => Vm.Install.RemoveItems(InstallListView.SelectedItems.Cast<TitleViewModel>());

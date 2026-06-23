@@ -97,8 +97,9 @@ public partial class ConverterTab : UserControl
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
+            Title = "변환할 파일 선택",
             Multiselect = true,
-            Filter = ConverterMainViewModel.GetFileDialogFilter()
+            Filter = InstallMainViewModel.GetFileDialogFilter()
         };
 
         if (dialog.ShowDialog() == true)

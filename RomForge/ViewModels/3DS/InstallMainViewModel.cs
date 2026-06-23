@@ -9,7 +9,7 @@ namespace RomForge.ViewModels._3DS;
 
 public class InstallMainViewModel : ToolTabViewModel
 {
-    private static readonly HashSet<string> AllowedExtensions = [".3ds", ".cia", ".cci", ".zcci"];
+    public static readonly HashSet<string> SupportedExtensions = [".3ds", ".cia", ".cci", ".zcci"];
 
     private bool _isInstalling;
 
@@ -30,7 +30,7 @@ public class InstallMainViewModel : ToolTabViewModel
             string fullPath = Path.GetFullPath(path);
             string ext = Path.GetExtension(fullPath).ToLowerInvariant();
 
-            if (!AllowedExtensions.Contains(ext) || Items.Any(f => f.FilePath == fullPath))
+            if (!SupportedExtensions.Contains(ext) || Items.Any(f => f.FilePath == fullPath))
                 continue;
 
             try
@@ -72,5 +72,12 @@ public class InstallMainViewModel : ToolTabViewModel
     {
         Items.Clear();
         OnPropertyChanged(nameof(HintVisibility));
+    }
+
+    public static string GetFileDialogFilter()
+    {
+        string wildcards = string.Join(";", SupportedExtensions.Select(ext => $"*{ext}"));
+
+        return $"지원 파일|{wildcards}|모든 파일|*.*";
     }
 }

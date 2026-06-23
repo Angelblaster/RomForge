@@ -15,11 +15,6 @@ namespace RomForge.ViewModels._3DS;
 
 public class ConverterMainViewModel : ToolTabViewModel
 {
-    private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".3ds", ".cci", ".cia", ".zcci"
-    };
-
     #region Fields
 
     private bool _isConverting;
@@ -74,7 +69,7 @@ public class ConverterMainViewModel : ToolTabViewModel
 
         foreach (var path in ExpandPaths(paths))
         {
-            if (!SupportedExtensions.Contains(Path.GetExtension(path)))
+            if (!InstallMainViewModel.SupportedExtensions.Contains(Path.GetExtension(path)))
                 continue;
 
             if (!existing.Add(path))
@@ -118,12 +113,6 @@ public class ConverterMainViewModel : ToolTabViewModel
     {
         FileItems.Clear();
         OnPropertyChanged(nameof(HintVisibility));
-    }
-
-    public static string GetFileDialogFilter()
-    {
-        string wildcards = string.Join(";", SupportedExtensions.Select(ext => $"*{ext}"));
-        return $"지원 파일|{wildcards}|모든 파일|*.*";
     }
 
     #endregion
