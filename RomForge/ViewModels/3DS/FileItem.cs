@@ -1,13 +1,12 @@
 using _3DS.Core.Enums;
 using Common.WPF.ViewModels;
-using LibHac.Tools.Fs;
 using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace RomForge.ViewModels._3DS;
 
-public class FileItemViewModel : ViewModelBase
+public class FileItem : ViewModelBase
 {
     private BitmapSource? _icon;
     private string _titleId;    
@@ -130,7 +129,7 @@ public class FileItemViewModel : ViewModelBase
         _ => Brushes.Transparent
     };
 
-    public FileItemViewModel(string filePath)
+    public FileItem(string filePath)
     {
         FilePath = filePath;
         FileSizeBytes = new FileInfo(filePath).Length;

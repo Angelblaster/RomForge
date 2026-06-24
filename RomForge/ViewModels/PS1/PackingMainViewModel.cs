@@ -395,7 +395,7 @@ public class PackingMainViewModel : ToolTabViewModel
                 {
                     var resolved = RawDiscProcessor.Resolve(item.FilePath);
                     resolvedDiscs.Add(resolved);
-                    discInfos.Add(new DiscWriteInfo(resolved.IsoStream, resolved.IsoLength, mainGameId, orderedItems.Count > 1 ? $"{gameTitle} - Disc {item.No}" : gameTitle, resolved.TocData));
+                    discInfos.Add(new DiscWriteInfo(resolved.IsoStream, resolved.IsoLength, item.GameId, orderedItems.Count > 1 ? $"{gameTitle} - Disc {item.No}" : gameTitle, resolved.TocData));
                 }
 
                 await PbpPackager.WritePbpAsync(discInfos, mainGameId, gameTitle, targetOutputPath, _config.PS1.CompressLevel, assets, BuildProgressReporter(), _cts.Token);

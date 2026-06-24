@@ -1,5 +1,5 @@
 ﻿using NSW.WPF.Services;
-using RomForge.ViewModels._3DS;
+using RomForge.ViewModels.PS1;
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
@@ -8,13 +8,13 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 
-namespace RomForge.Controls._3DS;
+namespace RomForge.Controls.PS1;
 
-public partial class ConverterTab : UserControl
+public partial class UnpackingTab : UserControl
 {
-    private ConverterMainViewModel? ViewModel => DataContext as ConverterMainViewModel;
+    private UnpackingMainViewModel? ViewModel => (UnpackingMainViewModel)DataContext;
 
-    public ConverterTab()
+    public UnpackingTab()
     {
         InitializeComponent();
 
@@ -23,14 +23,14 @@ public partial class ConverterTab : UserControl
 
     private void ConverterTab_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (e.OldValue is ConverterMainViewModel oldVm)
+        if (e.OldValue is UnpackingMainViewModel oldVm)
             oldVm.ScrollToItemRequested -= OnScrollToItemRequested;
 
-        if (e.NewValue is ConverterMainViewModel newVm)
+        if (e.NewValue is UnpackingMainViewModel newVm)
             newVm.ScrollToItemRequested += OnScrollToItemRequested;
     }
 
-    private void OnScrollToItemRequested(FileItem item)
+    private void OnScrollToItemRequested(PbpFileItem item)
     {
         Dispatcher.InvokeAsync(() =>
         {
@@ -56,10 +56,10 @@ public partial class ConverterTab : UserControl
 
     private void LvFiles_KeyUp(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Delete) 
+        if (e.Key != Key.Delete)
             return;
 
-        var selected = lvFiles.SelectedItems.Cast<FileItem>().ToList();
+        var selected = lvFiles.SelectedItems.Cast<PbpFileItem>().ToList();
         ViewModel?.RemoveItems(selected);
     }
 
@@ -82,7 +82,7 @@ public partial class ConverterTab : UserControl
 
         ICollectionView dataView = CollectionViewSource.GetDefaultView(lvFiles.ItemsSource);
 
-        if (dataView == null) 
+        if (dataView == null)
             return;
 
         dataView.SortDescriptions.Clear();
@@ -97,9 +97,9 @@ public partial class ConverterTab : UserControl
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "변환할 파일 선택",
+            Title = "파일 선택",
             Multiselect = true,
-            Filter = InstallMainViewModel.GetFileDialogFilter()
+            Filter = "PBP 파일|*.pbp|모든 파일|*.*"
         };
 
         if (dialog.ShowDialog() == true)
@@ -120,7 +120,7 @@ public partial class ConverterTab : UserControl
 
     private void BtnRemove_Click(object sender, RoutedEventArgs e)
     {
-        var selected = lvFiles.SelectedItems.Cast<FileItem>().ToList();
+        var selected = lvFiles.SelectedItems.Cast<PbpFileItem>().ToList();
         ViewModel?.RemoveItems(selected);
     }
 
@@ -137,7 +137,7 @@ public partial class ConverterTab : UserControl
 
     private void MenuItem_OpenFolder_Click(object sender, RoutedEventArgs e)
     {
-        var selected = lvFiles.SelectedItems.Cast<FileItem>().ToList();
+        var selected = lvFiles.SelectedItems.Cast<PbpFileItem>().ToList();
 
         if (selected.Count == 0)
             return;

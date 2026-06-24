@@ -1,19 +1,20 @@
-using _3DS.Core.Crypto;
-using _3DS.Core.Services;
-using Common;
+﻿using Common;
 using Common.WPF.ViewModels;
+using PBP.Core.Enums;
+using PBP.Core.Services;
+using RomForge.Core.Services.PS1;
 using RomForge.Helpers;
 using RomForge.Models;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Runtime.InteropServices.Marshalling;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace RomForge.ViewModels._3DS;
+namespace RomForge.ViewModels.PS1;
 
-public class ConverterMainViewModel : ToolTabViewModel
+public class UnpackingMainViewModel : ToolTabViewModel
 {
     #region Fields
 
@@ -26,7 +27,7 @@ public class ConverterMainViewModel : ToolTabViewModel
 
     public ObservableCollection<LogEntry> LogEntries { get; } = [];
 
-    public ObservableCollection<FileItem> FileItems { get; } = [];
+    public ObservableCollection<PbpFileItem> FileItems { get; } = [];
 
     #endregion
 
@@ -49,11 +50,11 @@ public class ConverterMainViewModel : ToolTabViewModel
 
     #endregion
 
-    public event Action<FileItem>? ScrollToItemRequested;
+    public event Action<PbpFileItem>? ScrollToItemRequested;
 
     #region Constructor
 
-    public ConverterMainViewModel()
+    public UnpackingMainViewModel()
     {
         RunCommand = new RelayCommand(async _ => await RunAsync(), _ => !IsConverting && FileItems.Count > 0);
         CancelCommand = new RelayCommand(_ => _cts.Cancel(), _ => IsConverting);
@@ -69,30 +70,32 @@ public class ConverterMainViewModel : ToolTabViewModel
 
         foreach (var path in ExpandPaths(paths))
         {
-            if (!InstallMainViewModel.SupportedExtensions.Contains(Path.GetExtension(path)))
-                continue;
-
             if (!existing.Add(path))
                 continue;
 
-            var result = await Util.ParseFile(path);
-            var vm = new FileItem(path)
-            {
-                TitleId = result.Title!.TitleId,                
-                ProductCode = result.ProductCode,
-                ShortDescription = result.ShortDescription,
-                Publisher = result.Publisher,
-                Crypto = result.Crypto
-            };
+            var vm = new PbpFileItem(path);
 
-            if (result?.IconPixels is not null)
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            var reader = new PbpReader(stream);
+            var meta = GameMetadataLookup.Find(reader.Discs[0].DiscID);
+
+            vm.TitleName = meta?.Title;
+            vm.TitleId = string.Join(", ", reader.Discs.Select(d => d.DiscID));
+
+            if (PbpReader.TryGetResourceStream(ResourceType.ICON0, stream, out var iconStream))
             {
-                var bitmap = BitmapSource.Create(48, 48, 96, 96, PixelFormats.Bgr32, null, result?.IconPixels, 48 * 4);
+                var bitmap = new BitmapImage();
+
+                bitmap.BeginInit();
+                bitmap.StreamSource = iconStream;
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
                 bitmap.Freeze();
+
                 vm.Icon = bitmap;
             }
 
-            vm.No = FileItems.Count + 1 ;
+            vm.No = FileItems.Count + 1;
 
             FileItems.Add(vm);
         }
@@ -101,7 +104,7 @@ public class ConverterMainViewModel : ToolTabViewModel
         CommandManager.InvalidateRequerySuggested();
     }
 
-    public void RemoveItems(IEnumerable<FileItem> items)
+    public void RemoveItems(IEnumerable<PbpFileItem> items)
     {
         foreach (var item in items.ToList())
             FileItems.Remove(item);
@@ -131,7 +134,7 @@ public class ConverterMainViewModel : ToolTabViewModel
             try
             {
                 int totalCount = FileItems.Count;
-                AppendLog($"총 {totalCount}개의 3DS 변환 작업을 시작합니다.", LogLevel.Highlight);
+                AppendLog($"총 {totalCount}개의 언팩 작업을 시작합니다.", LogLevel.Highlight);
 
                 int cnt = 0;
                 foreach (var item in FileItems)
@@ -151,42 +154,17 @@ public class ConverterMainViewModel : ToolTabViewModel
 
                     try
                     {
-                        void logWrapper(string msg, LogLevel level, string id) => AppendLog(msg, level);
+                        _cts.Token.ThrowIfCancellationRequested();
 
-                        switch (item.SelectedTargetFormat)
+                        if (File.Exists(item.FilePath))
                         {
-                            case "CIA":
-                                {
-                                    KeyStore key = new();
-                                    CciToCiaConverter c = new(key);
-                                    await c.ConvertAsync(item.FilePath, progressHandler, logWrapper, _cts.Token);
-                                }
-                                break;
+                            var unpacker = new PbpUnpacker
+                            {
+                                OnNotify = msg => AppendLog(msg),
+                                OnProgress = bytes => item.Progress = (int)bytes
+                            };
 
-                            case "ZCCI":
-                                {
-                                    if (inputExt == "cia")
-                                        await Z3dsArchiveService.CompressFromCiaAsync(item.FilePath, 18, progressHandler, logWrapper, _cts.Token);
-                                    else
-                                        await Z3dsArchiveService.CompressAsync(item.FilePath, 18, progressHandler, logWrapper, _cts.Token);
-                                }
-                                break;
-
-                            case "CCI":
-                                {
-                                    if (inputExt == "zcci")
-                                        await Z3dsArchiveService.DecompressAsync(item.FilePath, progressHandler, logWrapper, _cts.Token);
-                                    else if (inputExt == "cia")
-                                    {
-                                        KeyStore key = new();
-                                        var ciaToCci = new CiaToCciConverter(key);
-                                        await ciaToCci.ConvertAsync(item.FilePath, progressHandler, logWrapper, _cts.Token);
-                                    }
-                                }
-                                break;
-
-                            default:
-                                throw new NotSupportedException("잘못된 출력 포맷 설정입니다.");
+                            unpacker.Unpack(item.FilePath, Path.GetDirectoryName(item.FilePath), true, _cts.Token);
                         }
 
                         item.Progress = 100;

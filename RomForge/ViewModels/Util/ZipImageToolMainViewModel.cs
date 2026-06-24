@@ -1,6 +1,7 @@
 ﻿using Common;
 using Common.WPF.ViewModels;
 using Ionic.Zlib;
+using NSW.WPF.Services;
 using NSW.WPF.UI;
 using PickPack.Disk;
 using PickPack.Disk.ETC;
@@ -448,6 +449,8 @@ public class ZipImageToolMainViewModel : ToolTabViewModel
         {
             Progress = 100;
             StatusText1 = "이미지 저장 완료";
+
+            Path.GetDirectoryName(ReadImagePath).OpenFolder();
 
             AppendLog("이미지 저장이 완료되었습니다.", LogLevel.Ok);
         });
