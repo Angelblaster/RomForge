@@ -16,19 +16,14 @@ public class PbpDiscEntry : IDisposable, IAsyncDisposable
 
     private readonly Stream _stream;
     private readonly int _psarOffset;
+    private readonly byte[] _compressionInBuffer;
 
     public List<IsoBlock> IsoIndex { get; }
-
     public List<TocEntry> TOC { get; }
-
     public uint IsoSize { get; }
-
     public int Index { get; }
-
     public string DiscID { get; }
-
     public bool IsPvdMismatch { get; }
-
 
     public PbpDiscEntry(Stream stream, int psarOffset, int index)
     {
@@ -38,6 +33,7 @@ public class PbpDiscEntry : IDisposable, IAsyncDisposable
         DiscID = GetDiscID();
         TOC = ReadTOC();
         IsoIndex = ReadIsoIndexes();
+        _compressionInBuffer = new byte[16 * ISO_BLOCK_SIZE * 2];
         IsoSize = GetIsoSize(out bool mismatch);
         IsPvdMismatch = mismatch;
     }
@@ -45,6 +41,7 @@ public class PbpDiscEntry : IDisposable, IAsyncDisposable
     private string GetDiscID()
     {
         var buffer = new byte[16];
+
         _stream.Seek(_psarOffset + PSAR_GAMEID_OFFSET, SeekOrigin.Begin);
         _stream.ReadByte();
         _stream.Read(buffer, 0, 4);
@@ -57,53 +54,45 @@ public class PbpDiscEntry : IDisposable, IAsyncDisposable
     private List<TocEntry> ReadTOC()
     {
         var entries = new List<TocEntry>();
+        var buffer = new byte[0xA];
 
-        try
+        _stream.Seek(_psarOffset + PSAR_TOC_OFFSET, SeekOrigin.Begin);
+        _stream.Read(buffer, 0, 0xA);
+
+        if (buffer[2] != 0xA0) 
+            throw new Exception("Invalid TOC!");
+
+        int startTrack = TOCHelper.FromBinaryDecimal(buffer[7]);
+
+        _stream.Read(buffer, 0, 0xA);
+
+        if (buffer[2] != 0xA1) 
+            throw new Exception("Invalid TOC!");
+
+        int endTrack = TOCHelper.FromBinaryDecimal(buffer[7]);
+
+        _stream.Read(buffer, 0, 0xA);
+
+        if (buffer[2] != 0xA2) 
+            throw new Exception("Invalid TOC!");
+
+        for (var c = startTrack; c <= endTrack; c++)
         {
-            var buffer = new byte[0xA];
-            _stream.Seek(_psarOffset + PSAR_TOC_OFFSET, SeekOrigin.Begin);
-
             _stream.Read(buffer, 0, 0xA);
 
-            if (buffer[2] != 0xA0) 
+            var trackNo = TOCHelper.FromBinaryDecimal(buffer[2]);
+
+            if (trackNo != c) 
                 throw new Exception("Invalid TOC!");
 
-            int startTrack = TOCHelper.FromBinaryDecimal(buffer[7]);
-
-            _stream.Read(buffer, 0, 0xA);
-
-            if (buffer[2] != 0xA1) 
-                throw new Exception("Invalid TOC!");
-
-            int endTrack = TOCHelper.FromBinaryDecimal(buffer[7]);
-
-            _stream.Read(buffer, 0, 0xA);
-
-            if (buffer[2] != 0xA2)
-                throw new Exception("Invalid TOC!");
-
-            for (var c = startTrack; c <= endTrack; c++)
+            entries.Add(new TocEntry
             {
-                _stream.Read(buffer, 0, 0xA);
-
-                var trackNo = TOCHelper.FromBinaryDecimal(buffer[2]);
-
-                if (trackNo != c) 
-                    throw new Exception("Invalid TOC!");
-
-                entries.Add(new TocEntry
-                {
-                    TrackType = (TrackType)buffer[0],
-                    TrackNo = trackNo,
-                    Minutes = TOCHelper.FromBinaryDecimal(buffer[3]),
-                    Seconds = TOCHelper.FromBinaryDecimal(buffer[4]),
-                    Frames = TOCHelper.FromBinaryDecimal(buffer[5])
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
+                TrackType = (TrackType)buffer[0],
+                TrackNo = trackNo,
+                Minutes = TOCHelper.FromBinaryDecimal(buffer[3]),
+                Seconds = TOCHelper.FromBinaryDecimal(buffer[4]),
+                Frames = TOCHelper.FromBinaryDecimal(buffer[5])
+            });
         }
 
         return entries;
@@ -125,7 +114,6 @@ public class PbpDiscEntry : IDisposable, IAsyncDisposable
             var length = _stream.ReadInteger();
 
             _stream.Read(dummy, 6);
-
             thisOffset = (uint)_stream.Position;
 
             if (offset != 0 || length != 0)
@@ -137,7 +125,7 @@ public class PbpDiscEntry : IDisposable, IAsyncDisposable
             }
         }
 
-        if (isoIndex.Count == 0) 
+        if (isoIndex.Count == 0)
             throw new Exception("No iso index was found.");
 
         return isoIndex;
@@ -146,10 +134,11 @@ public class PbpDiscEntry : IDisposable, IAsyncDisposable
     public uint ReadBlock(int blockNo, byte[] buffer)
     {
         var thisOffset = _psarOffset + PSAR_ISO_OFFSET + IsoIndex[blockNo].Offset;
+        var blockLength = IsoIndex[blockNo].Length;
 
         _stream.Seek(thisOffset, SeekOrigin.Begin);
 
-        if (IsoIndex[blockNo].Length == 16 * ISO_BLOCK_SIZE)
+        if (blockLength == 16 * ISO_BLOCK_SIZE)
         {
             _stream.Read(buffer, 0, 16 * ISO_BLOCK_SIZE);
 
@@ -157,10 +146,9 @@ public class PbpDiscEntry : IDisposable, IAsyncDisposable
         }
         else
         {
-            var inBuffer = new byte[IsoIndex[blockNo].Length];
-            _stream.Read(inBuffer, 0, IsoIndex[blockNo].Length);
+            _stream.Read(_compressionInBuffer, 0, blockLength);
 
-            var decompressed = Compression.Decompress(inBuffer, 16 * ISO_BLOCK_SIZE);
+            var decompressed = Compression.Decompress(_compressionInBuffer, 16 * ISO_BLOCK_SIZE);
 
             Array.Copy(decompressed, buffer, decompressed.Length);
 
@@ -218,10 +206,17 @@ public class PbpDiscEntry : IDisposable, IAsyncDisposable
         }
     }
 
-    public void Dispose() => _stream?.Dispose();
+    public void Dispose()
+    {
+        _stream?.Dispose();
+        GC.SuppressFinalize(this);
+    }
 
     public async ValueTask DisposeAsync()
     {
-        if (_stream != null) await _stream.DisposeAsync();
+        if (_stream != null) 
+            await _stream.DisposeAsync();
+
+        GC.SuppressFinalize(this);
     }
 }

@@ -53,7 +53,6 @@ public static class PbpHeaderBuilder
 
         header[0] = PBPMAGIC;
         header[1] = 0x10000;
-
         header[2] = currentOffset;
 
         currentOffset += sfoSize;

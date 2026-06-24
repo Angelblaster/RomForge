@@ -35,12 +35,11 @@ public static class Iso9660GameIdExtractor
                 break;
 
             var nameLen = sector[pos + 32];
-            var name = Encoding.ASCII.GetString(sector, pos + 33, nameLen).Split(';')[0].ToUpperInvariant();
+            var name = Encoding.ASCII.GetString(sector, pos + 33, nameLen).Split(';')[0].Trim().ToUpperInvariant();
 
             if (name == "SYSTEM.CNF")
             {
                 var fileLba = BitConverter.ToUInt32(sector, pos + 2);
-
                 return ReadSystemCnf(sectorReader, fileLba);
             }
 
@@ -55,12 +54,12 @@ public static class Iso9660GameIdExtractor
         var content = Encoding.ASCII.GetString(sectorReader(lba));
         var boot = Regex.Match(content, @"BOOT\s*=\s*cdrom[:\\\/]+([A-Z]{4}_\d{3}\.\d+)", RegexOptions.IgnoreCase);
 
-        if (!boot.Success) 
+        if (!boot.Success)
             return null;
 
         var id = Regex.Match(boot.Groups[1].Value.ToUpperInvariant(), @"([A-Z]{4})_(\d{3})\.(\d+)");
 
-        if (!id.Success) 
+        if (!id.Success)
             return null;
 
         return $"{id.Groups[1].Value}{id.Groups[2].Value}{id.Groups[3].Value}";

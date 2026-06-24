@@ -1,34 +1,50 @@
-﻿namespace PBP.Core.Services;
+﻿using System.Text.RegularExpressions;
+
+namespace PBP.Core.Services;
 
 public static class CueFileResolver
 {
+    private static readonly Regex FileRegex = new(@"^FILE\s+""(.*?)""\s+(.*?)\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex FileNoQuoteRegex = new(@"^FILE\s+(.*?)\s+(BINARY|MOTOROLA|AIFF|WAVE|MP3)\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     public static string GetBinPath(string cuePath)
     {
-        var line = File.ReadLines(cuePath)
-            .FirstOrDefault(l => l.TrimStart().StartsWith("FILE", StringComparison.OrdinalIgnoreCase)) ?? throw new Exception($"{Path.GetFileName(cuePath)}에서 FILE 항목을 찾을 수 없습니다.");
+        var referencedFiles = GetAllReferencedFiles(cuePath);
 
-        var match = System.Text.RegularExpressions.Regex.Match(line, "\"(.+?)\"");
-        var binFileName = match.Success ? match.Groups[1].Value : line.Split(' ', 2)[1].Trim('"');
+        if (referencedFiles.Count == 0)
+            throw new Exception($"{Path.GetFileName(cuePath)}에서 FILE 항목을 찾을 수 없습니다.");
 
-        return Path.Combine(Path.GetDirectoryName(cuePath)!, binFileName);
+        return referencedFiles[0];
     }
 
     public static List<string> GetAllReferencedFiles(string cuePath)
     {
-        var dir = Path.GetDirectoryName(cuePath)!;
+        var dir = Path.GetDirectoryName(cuePath) ?? string.Empty;
         var results = new List<string>();
 
         foreach (var line in File.ReadLines(cuePath))
         {
-            var trimmed = line.TrimStart();
+            var trimmed = line.Trim();
 
-            if (!trimmed.StartsWith("FILE", StringComparison.OrdinalIgnoreCase)) 
+            if (!trimmed.StartsWith("FILE", StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            var match = System.Text.RegularExpressions.Regex.Match(trimmed, "\"(.+?)\"");
-            var fileName = match.Success ? match.Groups[1].Value : trimmed.Split(' ', 3)[1].Trim('"');
+            string? fileName = null;
 
-            results.Add(Path.Combine(dir, fileName));
+            var match = FileRegex.Match(trimmed);
+
+            if (match.Success)
+                fileName = match.Groups[1].Value;
+            else
+            {
+                var noQuoteMatch = FileNoQuoteRegex.Match(trimmed);
+
+                if (noQuoteMatch.Success)
+                    fileName = noQuoteMatch.Groups[1].Value;
+            }
+
+            if (!string.IsNullOrEmpty(fileName))
+                results.Add(Path.Combine(dir, fileName));
         }
 
         return results;

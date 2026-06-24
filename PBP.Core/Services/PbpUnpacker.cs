@@ -15,38 +15,55 @@ public class PbpUnpacker
 
         var baseName = Path.GetFileNameWithoutExtension(pbpPath);
         var isMultiDisc = reader.Discs.Count > 1;
-
         var totalSize = reader.Discs.Sum(d => d.IsoSize);
         long baseSize = 0;
 
-        foreach (var disc in reader.Discs)
+        var createdFiles = new List<string>();
+
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var capturedBase = baseSize;
-
-            disc.ProgressEvent = bytes => OnProgress?.Invoke((int)Math.Round((capturedBase + bytes) * 100.0 / totalSize));
-
-            var discSuffix = isMultiDisc ? $" (Disc {disc.Index})" : string.Empty;
-            var binPath = Path.Combine(outputDir, $"{baseName}{discSuffix}.bin");
-            var cuePath = Path.Combine(outputDir, $"{baseName}{discSuffix}.cue");
-
-            OnNotify?.Invoke($"언팩중 {binPath}...");
-
-            await Task.Run(() =>
+            foreach (var disc in reader.Discs)
             {
-                using var binStream = new FileStream(binPath, FileMode.Create, FileAccess.Write);
-                disc.CopyTo(binStream, cancellationToken);
-            }, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
 
-            if (createCuesheet)
-            {
-                var cueFile = TOCHelper.TOCtoCUE(disc.TOC, Path.GetFileName(binPath));
-                CueFileWriter.Write(cueFile, cuePath);
-                OnNotify?.Invoke($"언팩중 {cuePath}...");
+                var capturedBase = baseSize;
+
+                disc.ProgressEvent = bytes => OnProgress?.Invoke((int)Math.Round((capturedBase + bytes) * 100.0 / totalSize));
+
+                var discSuffix = isMultiDisc ? $" (Disc {disc.Index})" : string.Empty;
+                var binPath = Path.Combine(outputDir, $"{baseName}{discSuffix}.bin");
+                var cuePath = Path.Combine(outputDir, $"{baseName}{discSuffix}.cue");
+
+                OnNotify?.Invoke($"언팩중 {binPath}...");
+                createdFiles.Add(binPath);
+
+                await Task.Run(() =>
+                {
+                    using var binStream = new FileStream(binPath, FileMode.Create, FileAccess.Write);
+
+                    disc.CopyTo(binStream, cancellationToken);
+                }, cancellationToken);
+
+                if (createCuesheet)
+                {
+                    var cueFile = TOCHelper.TOCtoCUE(disc.TOC, Path.GetFileName(binPath));
+
+                    createdFiles.Add(cuePath); // 👈
+                    CueFileWriter.Write(cueFile, cuePath);
+                    OnNotify?.Invoke($"언팩중 {cuePath}...");
+                }
+
+                baseSize += disc.IsoSize;
             }
+        }
+        catch (Exception)
+        {
+            OnNotify?.Invoke("실패 - 생성된 파일 정리 중...");
 
-            baseSize += disc.IsoSize;
+            foreach (var path in createdFiles)
+                try { File.Delete(path); } catch { }
+
+            throw;
         }
 
         OnNotify?.Invoke("언팩 완료");

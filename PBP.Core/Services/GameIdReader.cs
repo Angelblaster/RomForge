@@ -10,48 +10,22 @@ public static class GameIdReader
 {
     private const string Fallback = "SLUS00000";
 
-    public static string ReadFromDisk(DiskSource source)
-    {
-        try
-        {
-            return source.Type == DiskSourceType.Chd
-                ? ReadFromChd(source.FilePath)
-                : ReadFromFilePath(source.FilePath);
-        }
-        catch
-        {
-            throw;
-        }
-    }
+    public static string ReadFromDisk(DiskSource source) => source.Type == DiskSourceType.Chd ? ReadFromChd(source.FilePath) : ReadFromFilePath(source.FilePath);
 
     public static string ReadFromStream(Stream stream, long length)
     {
-        try
+        var isRaw = length >= 2352 && length % 2352 == 0;
+
+        byte[] SectorReader(uint lba)
         {
-            var isRaw = length >= 2352 && length % 2352 == 0;
+            var sector = new byte[2048];
+            stream.Seek(isRaw ? lba * 2352 + 24 : lba * 2048, SeekOrigin.Begin);
+            stream.Read(sector, 0, 2048);
 
-            byte[] SectorReader(uint lba)
-            {
-                var sector = new byte[2048];
-                stream.Seek(isRaw ? lba * 2352 + 24 : lba * 2048, SeekOrigin.Begin);
-                stream.Read(sector, 0, 2048);
-                return sector;
-            }
-
-            var (id, result) = Extract(SectorReader);
-
-            return result switch
-            {
-                ExtractResult.Success => id!,
-                ExtractResult.NotPs1Disc => throw new NotSupportedException("PS1 게임만 지원합니다."),
-                ExtractResult.InvalidDisc => throw new InvalidOperationException("디스크를 읽을 수 없습니다."),
-                _ => Fallback
-            };
+            return sector;
         }
-        catch
-        {
-            throw;
-        }
+
+        return HandleExtractResult(Extract(SectorReader));
     }
 
     private static string ReadFromFilePath(string filePath)
@@ -82,11 +56,14 @@ public static class GameIdReader
             return sector;
         }
 
-        var (id, result) = Extract(SectorReader);
+        return HandleExtractResult(Extract(SectorReader));
+    }
 
-        return result switch
+    private static string HandleExtractResult((string? Id, ExtractResult Result) extraction)
+    {
+        return extraction.Result switch
         {
-            ExtractResult.Success => id!,
+            ExtractResult.Success => extraction.Id!,
             ExtractResult.NotPs1Disc => throw new NotSupportedException("PS1 게임만 지원합니다."),
             ExtractResult.InvalidDisc => throw new InvalidOperationException("디스크를 읽을 수 없습니다."),
             _ => Fallback
@@ -95,19 +72,26 @@ public static class GameIdReader
 
     public static uint GetTrack1FileOffset(LibChdrWrapper chd)
     {
-        var meta = chd.GetMetadata(0x54524B32, 0);
+        int index = 0;
+        string? meta;
 
-        if (meta != null)
+        while ((meta = chd.GetMetadata(0x54524B32, (uint)index++)) != null)
         {
-            var m = System.Text.RegularExpressions.Regex.Match(meta,
-                @"TRACK:(\d+) TYPE:(\S+) SUBTYPE:(\S+) FRAMES:(\d+) PREGAP:(\d+) PGTYPE:(\S+) PGSUB:(\S+) POSTGAP:(\d+)");
+            var m = System.Text.RegularExpressions.Regex.Match(meta, @"TRACK:(\d+) TYPE:(\S+) SUBTYPE:(\S+) FRAMES:(\d+) PREGAP:(\d+) PGTYPE:(\S+) PGSUB:(\S+) POSTGAP:(\d+)");
 
             if (m.Success)
             {
-                var pregapFrames = int.Parse(m.Groups[5].Value);
+                var trackNum = int.Parse(m.Groups[1].Value);
 
-                if (pregapFrames > 0 && m.Groups[6].Value.StartsWith('V'))
-                    return (uint)pregapFrames;
+                if (trackNum == 1)
+                {
+                    var pregapFrames = int.Parse(m.Groups[5].Value);
+
+                    if (pregapFrames > 0 && m.Groups[6].Value.StartsWith('V'))
+                        return (uint)pregapFrames;
+
+                    break;
+                }
             }
         }
 

@@ -1,9 +1,8 @@
-﻿using PBP.Core.Models;
-namespace PBP.Core.Services;
+﻿namespace PBP.Core.Services;
 
 public static class CuePreprocessor
 {
-    public static ResolvedDisc Resolve(string inputPath, string? tempDir = null)
+    public static ResolvedDisc Resolve(string inputPath)
     {
         if (!Path.GetExtension(inputPath).Equals(".cue", StringComparison.InvariantCultureIgnoreCase))
         {

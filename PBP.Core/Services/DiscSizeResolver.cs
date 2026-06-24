@@ -12,7 +12,7 @@ public static class DiscSizeResolver
                 .Where(File.Exists)
                 .Sum(f => new FileInfo(f).Length),
             ".m3u" => GetM3uTotalSize(path),
-            _ => new FileInfo(path).Length
+            _ => File.Exists(path) ? new FileInfo(path).Length : 0
         };
     }
 
@@ -30,8 +30,7 @@ public static class DiscSizeResolver
 
             var fullPath = Path.IsPathRooted(trimmed) ? trimmed : Path.Combine(dir, trimmed);
 
-            if (File.Exists(fullPath))
-                total += GetTotalSize(fullPath);
+            total += GetTotalSize(fullPath);
         }
 
         return total;

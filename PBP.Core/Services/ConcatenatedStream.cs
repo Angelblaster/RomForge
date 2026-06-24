@@ -14,9 +14,10 @@ public sealed class ConcatenatedStream(IReadOnlyList<Stream> streams) : Stream
         {
             int read = streams[_currentIndex].Read(buffer, offset + bytesRead, count - bytesRead);
 
-            if (read == 0) 
-            { _currentIndex++; 
-                continue; 
+            if (read == 0)
+            {
+                _currentIndex++;
+                continue;
             }
 
             bytesRead += read;
@@ -36,20 +37,30 @@ public sealed class ConcatenatedStream(IReadOnlyList<Stream> streams) : Stream
             _ => _position
         };
 
-        _position = 0;
-        _currentIndex = 0;
+        target = Math.Clamp(target, 0, _totalLength);
 
-        foreach (var s in streams)
+        long accumulatedLength = 0;
+        _currentIndex = streams.Count;
+        _position = target;
+
+        for (int i = 0; i < streams.Count; i++)
         {
-            if (_position + s.Length > target)
-            {
-                s.Seek(target - _position, SeekOrigin.Begin);
-                _position = target;
+            var s = streams[i];
 
-                return _position;
+            if (accumulatedLength + s.Length > target)
+            {
+                if (_currentIndex == streams.Count)
+                    _currentIndex = i;
+
+                s.Seek(target - accumulatedLength, SeekOrigin.Begin);
             }
-            _position += s.Length;
-            _currentIndex++;
+            else
+                s.Seek(s.Length, SeekOrigin.Begin);
+
+            if (accumulatedLength > target)
+                s.Seek(0, SeekOrigin.Begin);
+
+            accumulatedLength += s.Length;
         }
 
         return _position;
@@ -66,8 +77,8 @@ public sealed class ConcatenatedStream(IReadOnlyList<Stream> streams) : Stream
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) 
-            foreach (var s in streams) 
+        if (disposing)
+            foreach (var s in streams)
                 s.Dispose();
 
         base.Dispose(disposing);

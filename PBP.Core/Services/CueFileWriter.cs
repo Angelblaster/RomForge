@@ -6,8 +6,7 @@ public static class CueFileWriter
 {
     public static void Write(CueFile cueFile, string path)
     {
-        using var stream = new FileStream(path, FileMode.Create, FileAccess.Write);
-        using var writer = new StreamWriter(stream);
+        using var writer = new StreamWriter(path, false);
 
         foreach (var entry in cueFile.Entries)
         {
