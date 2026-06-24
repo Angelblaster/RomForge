@@ -304,8 +304,8 @@ public class PackingMainViewModel : ToolTabViewModel
 
             var meta = GameMetadataLookup.Find(primary.GameId);
 
-            if (meta != null && !string.IsNullOrWhiteSpace(meta.Title))
-                GameTitle = meta.Title;
+            if (meta != null && !string.IsNullOrWhiteSpace(meta.ETitle))
+                GameTitle = meta.ETitle;
 
             _lastIconGameId = primary.GameId;
 

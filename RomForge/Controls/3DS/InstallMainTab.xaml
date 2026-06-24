@@ -37,8 +37,8 @@
                     </DockPanel>
 
                     <DockPanel Grid.Column="2">
-                        <Image DockPanel.Dock="Left" Source="/Assets/Images/Seed.png" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock DockPanel.Dock="Left" Text="movable.sed" Foreground="#8888A8" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                        <Image DockPanel.Dock="Left" Source="/Assets/Images/Seed.png" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,6,0" MouseDown="Image_MouseDown"/>
+                        <TextBlock DockPanel.Dock="Left" Text="movable.sed" Foreground="#8888A8" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,15,0" MouseDown="Image_MouseDown"/>
                         <Button x:Name="BrowseMovableButton" DockPanel.Dock="Right" Height="32" Width="32" Margin="15,0,0,0" Click="BrowseMovable_Click" Background="Transparent" BorderBrush="Transparent" Padding="0" IsEnabled="{Binding IsIdle}">
                             <Image Source="/Assets/Images/AddFile.png" Width="32" Height="32" Stretch="UniformToFill"/>
                         </Button>

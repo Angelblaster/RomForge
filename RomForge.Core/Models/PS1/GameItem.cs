@@ -5,14 +5,25 @@ namespace RomForge.Core.Models.PS1;
 public class GameItem
 {
     [JsonPropertyName("id")]
-    public string Id { get; set; } = string.Empty;
+    public string Id { get; set; }
 
-    [JsonPropertyName("title")]
-    public string Title { get; set; } = string.Empty;
+    [JsonPropertyName("eTitle")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string ETitle { get; set; }
+
+    [JsonPropertyName("lTitle")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string LTitle { get; set; }
+
+    [JsonPropertyName("languages")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string> Languages { get; set; }
 
     [JsonPropertyName("pic0")]
-    public string Pic0 { get; set; } = string.Empty;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string Pic0 { get; set; }
 
     [JsonPropertyName("pic1")]
-    public string Pic1 { get; set; } = string.Empty;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string Pic1 { get; set; }
 }

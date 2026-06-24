@@ -82,7 +82,9 @@ public class UnpackingMainViewModel : ToolTabViewModel
                 var reader = new PbpReader(stream);
                 var meta = GameMetadataLookup.Find(reader.Discs[0].DiscID);
 
-                vm.TitleName = meta?.Title;
+                vm.TitleName = meta?.ETitle;
+                vm.TitleLocalName = meta?.LTitle;
+                vm.Languages = meta?.Languages ?? [];
                 vm.TitleId = string.Join(", ", reader.Discs.Select(d => d.DiscID));
 
                 if (PbpReader.TryGetResourceStream(ResourceType.ICON0, stream, out var iconStream))
@@ -101,10 +103,10 @@ public class UnpackingMainViewModel : ToolTabViewModel
                 vm.No = FileItems.Count + 1;
 
                 FileItems.Add(vm);
-            }
 
-            OnPropertyChanged(nameof(HintVisibility));
-            CommandManager.InvalidateRequerySuggested();
+                OnPropertyChanged(nameof(HintVisibility));
+                CommandManager.InvalidateRequerySuggested();
+            }
         }
         catch(Exception ex)
         {

@@ -2,6 +2,7 @@
 using PickPack.Disk;
 using RomForge.Core.Services;
 using RomForge.ViewModels._3DS;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -115,4 +116,13 @@ public partial class InstallMainTab : UserControl
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => ViewModel.CancelExtract();
+
+    private void Image_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "https://seedminer.hacks.guide/",
+            UseShellExecute = true
+        });
+    }
 }

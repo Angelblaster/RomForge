@@ -9,6 +9,8 @@ public class PbpFileItem : ViewModelBase
     private BitmapSource? _icon;
     private string _titleId;
     private string _titleName = string.Empty;
+    private string _titleLocalName = string.Empty;
+    private List<string> _languages = [];
     private string _status = string.Empty;
     private int _progress;
 
@@ -54,6 +56,18 @@ public class PbpFileItem : ViewModelBase
     {
         get => string.IsNullOrEmpty(_titleName) ? TitleId : _titleName;
         set { _titleName = value; OnPropertyChanged(); }
+    }
+
+    public string TitleLocalName
+    {
+        get => _titleLocalName;
+        set { _titleLocalName = value; OnPropertyChanged(); }
+    }
+
+    public List<string> Languages
+    {
+        get => _languages;
+        set { _languages = value; OnPropertyChanged(); }
     }
 
     public PbpFileItem(string filePath)
