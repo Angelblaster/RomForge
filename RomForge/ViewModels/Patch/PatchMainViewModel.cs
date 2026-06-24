@@ -1,5 +1,4 @@
 ﻿using RomForge.Helpers;
-using RomForge.ViewModels.Patch;
 using System.Windows.Input;
 
 namespace RomForge.ViewModels.Patch;
