@@ -88,6 +88,7 @@ public class PackingMainViewModel : ToolTabViewModel
             _isDownloading = value; 
             OnPropertyChanged(); 
             OnPropertyChanged(nameof(CanRun));
+            Application.Current.Dispatcher.InvokeAsync(CommandManager.InvalidateRequerySuggested);
         }
     }
 
