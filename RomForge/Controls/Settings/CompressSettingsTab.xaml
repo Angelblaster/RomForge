@@ -23,7 +23,7 @@
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="압축 레벨" Foreground="#A0A0A0" FontSize="11" Margin="0,0,20,0"/>
-                            <TextBlock FontSize="11" Foreground="White">무압축</TextBlock>
+                            <TextBlock FontSize="11" Foreground="White">무압축(NSP)</TextBlock>
                             <TextBlock FontSize="11" Foreground="Gray" Margin="20,0,20,0">|</TextBlock>
                             <TextBlock FontSize="11" Foreground="#00FFFF">3: 최대 속도</TextBlock>
                             <TextBlock FontSize="11" Foreground="Gray" Margin="20,0,20,0">|</TextBlock>

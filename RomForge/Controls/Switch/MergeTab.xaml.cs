@@ -2,6 +2,8 @@
 using RomForge.ViewModels.Switch;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Res = NSW.Core.Properties.Resources;
 
 namespace RomForge.Controls.Switch;
@@ -13,6 +15,22 @@ public partial class MergeTab : UserControl
     public MergeTab()
     {
         InitializeComponent();
+
+        Image extraImage = new Image();
+        extraImage.Source = new BitmapImage(new Uri("/Assets/Images/Settings.png", UriKind.RelativeOrAbsolute));
+        extraImage.Width = 30;
+        extraImage.Height = 30;
+        RenderOptions.SetBitmapScalingMode(extraImage, BitmapScalingMode.HighQuality);
+
+        fileMgr.ExtraButton1.ToolTip = "압축 설정";
+        fileMgr.ExtraButton1.Visibility = Visibility.Visible;
+        fileMgr.ExtraButton1.Content = extraImage;
+        fileMgr.ExtraButton1Clicked += ExtraButton1Clicked;
+    }
+
+    private void ExtraButton1Clicked()
+    {
+        ViewModel.NavigateSettings();
     }
 
     protected override void OnVisualParentChanged(DependencyObject oldParent)

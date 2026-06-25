@@ -178,6 +178,5 @@ public class KeygenMainViewModel : ToolTabViewModel
 
     public void Log(string msg, LogLevel level = LogLevel.Info, string titleId = "") => Application.Current.Dispatcher.Invoke(() => LogEntries.Add(new LogEntry { Message = msg, Level = level }));
 
-
     #endregion
 }

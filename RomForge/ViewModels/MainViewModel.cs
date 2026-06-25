@@ -71,6 +71,7 @@ public class MainViewModel : ToolTabViewModel
         PatchVM = new PatchMainViewModel(_config, async (file) => await MapsToHashAndProcess(file));
         CompressVM = new CompressMainViewModel(_config);
         SwitchMainVM = new SwitchMainViewModel(_config);
+        SwitchMainVM.MergeVM.SettingsClicked += async (s, e) => await NavigateCompressSettings();
         Main3DsVM = new _3DSMainViewModel();
         PS1MainVM = new PS1MainViewModel(_config);
         PS1MainVM.RunNavigatePackingSettings += PS1MainVM_RunNavigatePackingSettings;

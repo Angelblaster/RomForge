@@ -1,6 +1,6 @@
-﻿using System.Windows;
+﻿using RomForge.ViewModels.Switch;
+using System.Windows;
 using System.Windows.Controls;
-using RomForge.ViewModels.Switch;
 
 namespace RomForge.Controls.Switch;
 
