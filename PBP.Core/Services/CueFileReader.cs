@@ -22,7 +22,7 @@ public static class CueFileReader
                 [
                     new CueTrack
                     {
-                        DataType = CueFormatStrings.Data,
+                        DataType = CueFormatStrings.Mode2_2352,
                         Number = 1,
                         Indexes = [new CueIndex { Number = 1, Position = new MsfPosition() }]
                     }
@@ -126,9 +126,7 @@ public static class CueFileReader
             entry.Tracks.Add(new CueTrack
             {
                 Number = track.TrackNumber,
-                DataType = track.TrackType?.Contains("AUDIO", StringComparison.InvariantCultureIgnoreCase) == true
-                    ? CueFormatStrings.Audio
-                    : CueFormatStrings.Data,
+                DataType = MapChdTrackTypeToCue(track.TrackType),
                 Indexes = indexes
             });
 
@@ -136,5 +134,32 @@ public static class CueFileReader
         }
 
         return new CueFile { Entries = [entry] };
+    }
+
+    private static string MapChdTrackTypeToCue(string? chdTrackType)
+    {
+        if (string.IsNullOrEmpty(chdTrackType))
+        {
+            return CueFormatStrings.Mode2_2352;
+        }
+
+        if (chdTrackType.Contains("AUDIO", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return CueFormatStrings.Audio;
+        }
+
+        if (chdTrackType.Contains("MODE1_2352", StringComparison.InvariantCultureIgnoreCase) ||
+            chdTrackType.Contains("MODE1/2352", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return CueFormatStrings.Mode1_2352;
+        }
+
+        if (chdTrackType.Contains("MODE2_2336", StringComparison.InvariantCultureIgnoreCase) ||
+            chdTrackType.Contains("MODE2/2336", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return CueFormatStrings.Mode2_2336;
+        }
+
+        return CueFormatStrings.Mode2_2352;
     }
 }

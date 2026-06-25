@@ -108,7 +108,16 @@ public partial class PackingTab : UserControl
 
     private void ExportImage(BitmapImage bmp, string fileNameBase)
     {
-        string fileName = !string.IsNullOrEmpty(ViewModel?.GameTitle) ? $"{ViewModel.GameTitle}_{fileNameBase}" : fileNameBase;
+        char[] invalidChars = Path.GetInvalidFileNameChars();
+
+        string safeGameTitle = !string.IsNullOrEmpty(ViewModel?.GameTitle)
+            ? string.Join("_", ViewModel.GameTitle.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries))
+            : string.Empty;
+
+        string fileName = !string.IsNullOrEmpty(safeGameTitle)
+            ? $"{safeGameTitle}_{fileNameBase}"
+            : fileNameBase;
+
         string tempFilePath = Path.Combine(Path.GetTempPath(), fileName);
 
         using (var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))

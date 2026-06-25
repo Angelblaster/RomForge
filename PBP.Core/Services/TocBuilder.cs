@@ -63,9 +63,13 @@ public static class TocBuilder
 
     public static byte GetTrackType(string dataType) => dataType switch
     {
-        CueFormatStrings.Data => 0x41,
+        CueFormatStrings.Mode1_2352 => 0x41,
+        CueFormatStrings.Mode2_2352 => 0x41,
+        CueFormatStrings.Mode2_2336 => 0x41,
+
         CueFormatStrings.Audio => 0x01,
-        _ => throw new NotSupportedException("PS1 게임 디스크만 지원합니다.")
+
+        _ => throw new NotSupportedException($"지원하지 않는 트랙 형식입니다: {dataType}")
     };
 
     public static byte ToBcd(int value) => (byte)((value / 10) * 0x10 + (value % 10));
