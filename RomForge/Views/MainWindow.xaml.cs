@@ -28,7 +28,7 @@ public partial class MainWindow : Window
         {
             try
             {
-                //await TestRepackAsync();
+                await TestRepackAsync();
             }
             catch (Exception ex)
             {
@@ -43,8 +43,7 @@ public partial class MainWindow : Window
         var keyStore = new KeyStore();
         await using var cciSource = await CciSource.OpenAsync(@"D:\3ds\Super Mario 3D Land.cci", keyStore);
         var ct = CancellationToken.None;
-
-        var repackedNcchs = new Dictionary<int, byte[]>();
+        var repackedNcchs = new Dictionary<int, (string path, long size)>();
 
         foreach (var content in cciSource.Contents)
         {
@@ -60,11 +59,35 @@ public partial class MainWindow : Window
 
                 var unpack = await NcchUnpacker.UnpackAsync(ncchStream, ncchHeader, ct);
                 var exefsBlock = unpack.ExeFs != null ? ExeFsPacker.Pack(unpack.ExeFs.Files) : [];
-                var romfsBlock = unpack.RomFs != null ? await RomFsPacker.PackAsync(ncchStream, unpack.RomFs, ct) : [];
-                var ncchBlock = await NcchBuilder.BuildAsync(unpack, exefsBlock, romfsBlock, ct);
 
-                repackedNcchs[idx] = ncchBlock;
-                Debug.WriteLine($"파티션 {idx} 재패킹 완료: {ncchBlock.Length:X} bytes");
+                byte[] romfsBlock;
+                if (unpack.RomFs != null)
+                {
+                    string tmpPath = Path.GetTempFileName();
+                    await using var tmpStream = new FileStream(tmpPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
+                    await RomFsPacker.PackAsync(ncchStream, unpack.RomFs, tmpStream, ct);
+                    tmpStream.Position = 0;
+                    romfsBlock = new byte[tmpStream.Length];
+                    await tmpStream.ReadExactlyAsync(romfsBlock, ct);
+                }
+                else
+                {
+                    romfsBlock = [];
+                }
+
+                // foreach 안에서
+                string romfsTmp = Path.GetTempFileName();
+                var romfsTmpStream = new FileStream(romfsTmp, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
+                if (unpack.RomFs != null)
+                    await RomFsPacker.PackAsync(ncchStream, unpack.RomFs, romfsTmpStream, ct);
+
+                string ncchTmp = Path.GetTempFileName();
+                await using var ncchTmpStream = new FileStream(ncchTmp, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+                await NcchBuilder.BuildAsync(unpack, exefsBlock, romfsTmpStream, ncchTmpStream, ct);
+                await romfsTmpStream.DisposeAsync();
+
+                repackedNcchs[idx] = (ncchTmp, ncchTmpStream.Length);
+                Debug.WriteLine($"파티션 {idx} 재패킹 완료: {ncchTmpStream.Length:X} bytes");
             }
         }
 
