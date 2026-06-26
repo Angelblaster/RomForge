@@ -28,7 +28,8 @@ public partial class MainWindow : Window
         {
             try
             {
-                await CompareUnpackedAsync();
+                string fileName = @"D:\3ds\Ocarina of Time 3D.cci";
+                await TestRepackAsync(fileName);
             }
             catch (Exception ex)
             {
@@ -38,73 +39,47 @@ public partial class MainWindow : Window
         };
     }
 
-    private static async Task TestRepackAsync()
+    private static async Task TestRepackAsync(string fileName)
     {
         var keyStore = new KeyStore();
-        await using var cciSource = await CciSource.OpenAsync(@"D:\3ds\Ocarina of Time 3D.cci", keyStore);
+        await using var cciSource = await CciSource.OpenAsync(fileName, keyStore);
         var ct = CancellationToken.None;
-        var repackedNcchs = new Dictionary<int, (NcchUnpackResult unpack, byte[] exefsBlock, MemoryStream romfsStream)>();
+        var repackedNcchs = new Dictionary<int, (NcchUnpackResult unpack, byte[] exefsBlock, Stream ncchSource, RomFsUnpackResult? romFs)>();
 
         foreach (var content in cciSource.Contents)
         {
             int idx = content.ContentIndex;
             var (ncchStream, _) = await cciSource.OpenContentDecrypted(idx);
-            await using (ncchStream)
-            {
-                // 파티션별 NCCH 헤더 읽기
-                byte[] hdrBuf = new byte[NcchHeader.Size];
-                await ncchStream.ReadExactlyAsync(hdrBuf, ct);
-                var ncchHeader = NcchHeader.Parse(hdrBuf);
-                ncchStream.Position = 0;
 
-                var unpack = await NcchUnpacker.UnpackAsync(ncchStream, ncchHeader, ct);
-                var exefsBlock = unpack.ExeFs != null ? ExeFsPacker.Pack(unpack.ExeFs.Files) : [];
+            // await using 제거! 나중에 WriteContentAsync에서 써야 하니까
+            byte[] hdrBuf = new byte[NcchHeader.Size];
+            await ncchStream.ReadExactlyAsync(hdrBuf, ct);
+            var ncchHeader = NcchHeader.Parse(hdrBuf);
+            ncchStream.Position = 0;
 
-                byte[] romfsBlock;
-                if (unpack.RomFs != null)
-                {
-                    string tmpPath = Path.GetTempFileName();
-                    await using var tmpStream = new FileStream(tmpPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
-                    await RomFsPacker.PackAsync(ncchStream, unpack.RomFs, tmpStream, ct);
-                    tmpStream.Position = 0;
-                    romfsBlock = new byte[tmpStream.Length];
-                    await tmpStream.ReadExactlyAsync(romfsBlock, ct);
-                }
-                else
-                {
-                    romfsBlock = [];
-                }
+            var unpack = await NcchUnpacker.UnpackAsync(ncchStream, ncchHeader, ct);
+            var exefsBlock = unpack.ExeFs != null ? ExeFsPacker.Pack(unpack.ExeFs.Files) : [];
 
-                // foreach 안에서
-                var romfsTmpStream = new MemoryStream();
-                if (unpack.RomFs != null)
-                    await RomFsPacker.PackAsync(ncchStream, unpack.RomFs, romfsTmpStream, ct);
-
-                string ncchTmp = Path.GetTempFileName();
-                await using var ncchTmpStream = new FileStream(ncchTmp, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
-                await NcchBuilder.BuildAsync(unpack, exefsBlock, romfsTmpStream, ncchTmpStream, ct);
-
-                repackedNcchs[idx] = (unpack, exefsBlock, romfsTmpStream);
-                Debug.WriteLine($"파티션 {idx} 재패킹 완료: {ncchTmpStream.Length:X} bytes");
-            }
+            repackedNcchs[idx] = (unpack, exefsBlock, ncchStream, unpack.RomFs);
+            Debug.WriteLine($"파티션 {idx} 준비 완료");
         }
 
         // RepackedNcsdSource로 감싸서 NcsdBuilder에 넘기기
         var repackedSource = await RepackedNcsdSource.CreateAsync(repackedNcchs, cciSource.Contents, ct);
-        string outputPath = @"D:\3ds\Ocarina of Time 3D_repacked.cci";
+        string outputPath = fileName + "re.cci";
         await using var output = File.Open(outputPath, FileMode.Create, FileAccess.ReadWrite);
         await NcsdBuilder.BuildAsync(repackedSource, output, null, ct);
 
         Debug.WriteLine($"완료: {outputPath}");
     }
 
-    private static async Task CompareUnpackedAsync()
+    private static async Task CompareUnpackedAsync(string fileName)
     {
         var keyStore = new KeyStore();
         var ct = CancellationToken.None;
 
-        await using var original = await CciSource.OpenAsync(@"D:\3ds\Ocarina of Time 3D.cci", keyStore);
-        await using var repacked = await CciSource.OpenAsync(@"D:\3ds\Ocarina of Time 3D_repacked.cci", keyStore);
+        await using var original = await CciSource.OpenAsync(fileName, keyStore);
+        await using var repacked = await CciSource.OpenAsync(fileName + "re.cci", keyStore);
 
         foreach (var content in original.Contents)
         {
