@@ -43,12 +43,12 @@ public partial class MainWindow : Window
         var keyStore = new KeyStore();
         await using var cciSource = await CciSource.OpenAsync(@"D:\3ds\Super Mario 3D Land.cci", keyStore);
         var ct = CancellationToken.None;
-        var repackedNcchs = new Dictionary<int, (string path, long size)>();
+        var repackedNcchs = new Dictionary<int, (NcchUnpackResult unpack, byte[] exefsBlock, MemoryStream romfsStream)>();
 
         foreach (var content in cciSource.Contents)
         {
             int idx = content.ContentIndex;
-            var (ncchStream, _) = cciSource.OpenContentDecrypted(idx);
+            var (ncchStream, _) = await cciSource.OpenContentDecrypted(idx);
             await using (ncchStream)
             {
                 // 파티션별 NCCH 헤더 읽기
@@ -76,23 +76,21 @@ public partial class MainWindow : Window
                 }
 
                 // foreach 안에서
-                string romfsTmp = Path.GetTempFileName();
-                var romfsTmpStream = new FileStream(romfsTmp, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
+                var romfsTmpStream = new MemoryStream();
                 if (unpack.RomFs != null)
                     await RomFsPacker.PackAsync(ncchStream, unpack.RomFs, romfsTmpStream, ct);
 
                 string ncchTmp = Path.GetTempFileName();
                 await using var ncchTmpStream = new FileStream(ncchTmp, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
                 await NcchBuilder.BuildAsync(unpack, exefsBlock, romfsTmpStream, ncchTmpStream, ct);
-                await romfsTmpStream.DisposeAsync();
 
-                repackedNcchs[idx] = (ncchTmp, ncchTmpStream.Length);
+                repackedNcchs[idx] = (unpack, exefsBlock, romfsTmpStream);
                 Debug.WriteLine($"파티션 {idx} 재패킹 완료: {ncchTmpStream.Length:X} bytes");
             }
         }
 
         // RepackedNcsdSource로 감싸서 NcsdBuilder에 넘기기
-        var repackedSource = new RepackedNcsdSource(repackedNcchs, cciSource.Contents);
+        var repackedSource = await RepackedNcsdSource.CreateAsync(repackedNcchs, cciSource.Contents, ct);
         string outputPath = @"D:\3ds\Super Mario 3D Land_repacked.cci";
         await using var output = File.OpenWrite(outputPath);
         await NcsdBuilder.BuildAsync(repackedSource, output, null, ct);
