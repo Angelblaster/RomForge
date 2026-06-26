@@ -125,4 +125,13 @@ public partial class InstallMainTab : UserControl
             UseShellExecute = true
         });
     }
+
+    private void MovableTextBlock_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "https://seedminer.hacks.guide/",
+            UseShellExecute = true
+        });
+    }
 }

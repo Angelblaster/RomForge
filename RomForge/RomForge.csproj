@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <VersionPrefix>0.1.0.2</VersionPrefix>
+    <VersionPrefix>0.1.0.3</VersionPrefix>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
@@ -24,6 +24,7 @@
     <None Remove="Assets\Images\Keygen.png" />
     <None Remove="Assets\Images\Left.png" />
     <None Remove="Assets\Images\LowerA.png" />
+    <None Remove="Assets\Images\movable.sed.png" />
     <None Remove="Assets\Images\Neural.png" />
     <None Remove="Assets\Images\OpenFolder.png" />
     <None Remove="Assets\Images\Repack.png" />
@@ -47,6 +48,7 @@
     <Resource Include="Assets\Images\Keygen.png" />
     <Resource Include="Assets\Images\Left.png" />
     <Resource Include="Assets\Images\LowerA.png" />
+    <Resource Include="Assets\Images\movable.sed.png" />
     <Resource Include="Assets\Images\Neural.png" />
     <Resource Include="Assets\Images\OpenFolder.png" />
     <Resource Include="Assets\Images\Repack.png" />
