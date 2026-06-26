@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using Common;
+using Microsoft.Win32;
 using NSW.WPF.Services;
 using RomForge.ViewModels._3DS;
 using System.IO;
@@ -32,7 +33,14 @@ public partial class InstallTab : UserControl
             .SelectMany(path => Directory.Exists(path) ? GetFilesSafe(path) : [path])
             .ToList();
 
-        await Vm.Install.AddFiles(allFiles);
+        try
+        {
+            await Vm.Install.AddFiles(allFiles);
+        }
+        catch (Exception ex)
+        {
+            Vm.AppendLog($"오류: {ex.Message}", LogLevel.Error);
+        }
     }
 
     private void InstallList_DragOver(object sender, DragEventArgs e)
@@ -59,7 +67,14 @@ public partial class InstallTab : UserControl
         if (dialog.ShowDialog() != true) 
             return;
 
-        await Vm.Install.AddFiles(dialog.FileNames);
+        try
+        {
+            await Vm.Install.AddFiles(dialog.FileNames);
+        }
+        catch (Exception ex)
+        {
+            Vm.AppendLog($"오류: {ex.Message}", LogLevel.Error);
+        }
     }
 
     private async void InstallAddFolder_Click(object sender, RoutedEventArgs e)
@@ -71,7 +86,16 @@ public partial class InstallTab : UserControl
         };
 
         if (dialog.ShowDialog() == true)
-            await Vm.Install.AddFiles(GetFilesSafe(dialog.SelectedPath));
+        {
+            try
+            {
+                await Vm.Install.AddFiles(GetFilesSafe(dialog.SelectedPath));
+            }
+            catch (Exception ex)
+            {
+                Vm.AppendLog($"오류: {ex.Message}", LogLevel.Error);
+            }
+        }
     }
 
     private void InstallRemove_Click(object sender, RoutedEventArgs e) => Vm.Install.RemoveItems(InstallListView.SelectedItems.Cast<TitleViewModel>());
@@ -99,7 +123,7 @@ public partial class InstallTab : UserControl
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            Vm.AppendLog($"오류: {ex.Message}", Common.LogLevel.Error);
+            Vm.AppendLog($"오류: {ex.Message}", LogLevel.Error);
         }
         finally
         {

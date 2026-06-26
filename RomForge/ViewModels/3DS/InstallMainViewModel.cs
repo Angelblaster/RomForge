@@ -14,7 +14,9 @@ public class InstallMainViewModel : ToolTabViewModel
     private bool _isInstalling;
 
     public ObservableCollection<TitleViewModel> Items { get; } = [];
+
     public Visibility HintVisibility => Items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
     public bool IsNotInstalling => !IsInstalling;
 
     public bool IsInstalling
@@ -33,30 +35,26 @@ public class InstallMainViewModel : ToolTabViewModel
             if (!SupportedExtensions.Contains(ext) || Items.Any(f => f.FilePath == fullPath))
                 continue;
 
-            try
+            var result = await Util.ParseFile(fullPath);
+            var vm = new TitleViewModel()
             {
-                var result = await Util.ParseFile(fullPath);
-                var vm = new TitleViewModel()
-                {
-                    Title = result.Title!,
-                    FilePath = path,
-                    ProductCode = result.ProductCode,
-                    ShortDescription = result.ShortDescription,
-                    Publisher = result.Publisher,
-                    Crypto = result.Crypto
-                };
+                Title = result.Title!,
+                FilePath = path,
+                ProductCode = result.ProductCode,
+                ShortDescription = result.ShortDescription,
+                Publisher = result.Publisher,
+                Crypto = result.Crypto
+            };
 
-                if (result?.IconPixels is not null)
-                {
-                    var bitmap = BitmapSource.Create(48, 48, 96, 96, PixelFormats.Bgr32, null, result?.IconPixels, 48 * 4);
-                    bitmap.Freeze();
-                    vm.Icon = bitmap;
-                }
-
-                Items.Add(vm);
-                OnPropertyChanged(nameof(HintVisibility));
+            if (result?.IconPixels is not null)
+            {
+                var bitmap = BitmapSource.Create(48, 48, 96, 96, PixelFormats.Bgr32, null, result?.IconPixels, 48 * 4);
+                bitmap.Freeze();
+                vm.Icon = bitmap;
             }
-            catch { }
+
+            Items.Add(vm);
+            OnPropertyChanged(nameof(HintVisibility));
         }
     }
 

@@ -75,26 +75,33 @@ public class ConverterMainViewModel : ToolTabViewModel
             if (!existing.Add(path))
                 continue;
 
-            var result = await Util.ParseFile(path);
-            var vm = new FileItem(path)
+            try
             {
-                TitleId = result.Title!.TitleId,                
-                ProductCode = result.ProductCode,
-                ShortDescription = result.ShortDescription,
-                Publisher = result.Publisher,
-                Crypto = result.Crypto
-            };
+                var result = await Util.ParseFile(path);
+                var vm = new FileItem(path)
+                {
+                    TitleId = result.Title!.TitleId,
+                    ProductCode = result.ProductCode,
+                    ShortDescription = result.ShortDescription,
+                    Publisher = result.Publisher,
+                    Crypto = result.Crypto
+                };
 
-            if (result?.IconPixels is not null)
-            {
-                var bitmap = BitmapSource.Create(48, 48, 96, 96, PixelFormats.Bgr32, null, result?.IconPixels, 48 * 4);
-                bitmap.Freeze();
-                vm.Icon = bitmap;
+                if (result?.IconPixels is not null)
+                {
+                    var bitmap = BitmapSource.Create(48, 48, 96, 96, PixelFormats.Bgr32, null, result?.IconPixels, 48 * 4);
+                    bitmap.Freeze();
+                    vm.Icon = bitmap;
+                }
+
+                vm.No = FileItems.Count + 1;
+
+                FileItems.Add(vm);
             }
-
-            vm.No = FileItems.Count + 1 ;
-
-            FileItems.Add(vm);
+            catch (Exception ex)
+            {
+                AppendLog($"오류: {ex.Message}", LogLevel.Error);
+            }
         }
 
         OnPropertyChanged(nameof(HintVisibility));
@@ -257,9 +264,7 @@ public class ConverterMainViewModel : ToolTabViewModel
         if (Application.Current?.Dispatcher == null) 
             return;
 
-        Application.Current.Dispatcher.Invoke(() =>
-            LogEntries.Add(new LogEntry { Message = msg, Level = level })
-        );
+        Application.Current.Dispatcher.Invoke(() => LogEntries.Add(new LogEntry { Message = msg, Level = level }));
     }
 
     private void ClearLog()
