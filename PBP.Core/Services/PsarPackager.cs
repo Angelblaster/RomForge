@@ -4,7 +4,7 @@ namespace PBP.Core.Services;
 
 public static class PsarPackager
 {
-    public static void WritePsar(Stream outputStream, string mainGameTitle, string mainGameId, IReadOnlyList<DiscWriteInfo> discs, uint psarOffset, int compressionLevel, CancellationToken cancellationToken, Action<long, long>? onProgress = null)
+    public static void WritePsar(Stream outputStream, string mainGameTitle, string mainGameId, IReadOnlyList<DiscWriteInfo> discs, uint psarOffset, int compressionLevel, Action<long, long>? onProgress = null, CancellationToken cancellationToken = default)
     {
         var isoPositions = new uint[5];
         byte[] zeroBuffer = new byte[0x8000];

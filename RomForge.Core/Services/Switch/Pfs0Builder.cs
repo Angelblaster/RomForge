@@ -57,68 +57,17 @@ public static class Pfs0Builder
         outputStream.Write(new byte[headerPadding]);
 
         long totalEstimated = fileList.Sum(f => f.EstimatedSize);
-        long totalWritten = 0;
         string currentLabel = string.Empty;
-        var reportSw = Stopwatch.StartNew();
-        var startTime = Stopwatch.GetTimestamp();
-        var window = new Queue<(long ts, long written)>();
-        const double windowSec = 10.0;
-        var reportLock = new object();
+        var reporter = new ProgressReporter(displayName, titleId, totalEstimated, progress);
 
-        void ReportProgress(bool force = false)
-        {
-            lock (reportLock)
-            {
-                if (!force && reportSw.ElapsedMilliseconds < 100) return;
-
-                long now = Stopwatch.GetTimestamp();
-                window.Enqueue((now, totalWritten));
-                double freq = Stopwatch.Frequency;
-
-                while (window.Count > 1 && (now - window.Peek().ts) / freq > windowSec)
-                    window.Dequeue();
-
-                double mibPerSec = 0;
-                double etaSec = 0;
-
-                if (window.Count >= 2)
-                {
-                    var (ts, written) = window.Peek();
-                    double secSpan = (now - ts) / freq;
-                    long bytesSpan = totalWritten - written;
-                    double avgSpeed = totalWritten / ((now - startTime) / freq);
-                    double windowSpeed = secSpan > 0 ? bytesSpan / secSpan : 0;
-                    double progressRatio = totalEstimated > 0 ? (double)totalWritten / totalEstimated : 0;
-                    double blendedSpeed = avgSpeed * (1 - progressRatio) + windowSpeed * progressRatio;
-
-                    mibPerSec = blendedSpeed / (1024.0 * 1024.0);
-                    etaSec = blendedSpeed > 0 ? (totalEstimated - totalWritten) / blendedSpeed : 0;
-                }
-
-                double elapsedSec = (now - startTime) / freq;
-                var elapsed = TimeSpan.FromSeconds(elapsedSec);
-                var totalEta = TimeSpan.FromSeconds(elapsedSec + Math.Max(0, etaSec));
-                int pct = totalEstimated > 0 ? (int)(totalWritten * 100 / totalEstimated) : 0;
-                var r = Utils.CalculateProgress(totalWritten, totalEstimated, displayName);
-
-                progress?.Report(new ProgressInfo(pct, r.label, titleId, $"{mibPerSec:F1} MiB/s", $"{elapsed:mm\\:ss} / {totalEta:mm\\:ss}"));
-                reportSw.Restart();
-            }
-        }
-
-        void onRead(long bytesRead)
-        {
-            lock (reportLock)
-                totalWritten += bytesRead;
-            ReportProgress();
-        }
+        void onRead(long bytesRead) => reporter.AddProgress(bytesRead);
 
         var actualOffsets = new ulong[fileList.Count];
         var actualSizes = new ulong[fileList.Count];
         ulong relOffset = 0;
         using var timer = new System.Timers.Timer(200);
 
-        timer.Elapsed += (_, _) => ReportProgress(force: true);
+        timer.Elapsed += (_, _) => reporter.ForceReport();
         timer.AutoReset = true;
         timer.Start();
 

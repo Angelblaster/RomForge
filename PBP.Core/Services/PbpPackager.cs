@@ -1,7 +1,6 @@
 ﻿using Common;
 using PBP.Core.Constants;
 using PBP.Core.Models;
-using System.Diagnostics;
 
 namespace PBP.Core.Services;
 
@@ -24,9 +23,9 @@ public static class PbpPackager
 
             WriteCommonSections(outputStream, header, sfo, assets, psarOffset);
 
-            var reporter = CreateProgressReporter(gameTitle, gameId, progress, Stopwatch.GetTimestamp());
+            var reporter = new ProgressReporter(gameTitle, gameId, totalEstimated: 0, progress);
 
-            PsarPackager.WritePsar(outputStream, gameTitle, gameId, discInfos, psarOffset, compressionLevel, ct, reporter);
+            PsarPackager.WritePsar(outputStream, gameTitle, gameId, discInfos, psarOffset, compressionLevel, reporter.CreateAction(), ct);
             StartDatWriter.WriteStartDat(outputStream, basePbpBytes, assets.BootPng);
 
             return outputPath;
@@ -63,61 +62,5 @@ public static class PbpPackager
 
         for (var i = 0; i < psarOffset - pos; i++)
             outputStream.WriteByte(0);
-    }
-
-    private static Action<long, long> CreateProgressReporter(string gameTitle, string gameId, IProgress<ProgressInfo> progress, long startTime)
-    {
-        var reportLock = new object();
-        var reportSw = Stopwatch.StartNew();
-        var window = new Queue<(long ts, long written)>();
-        double windowSec = 2.0;
-
-        return (cur, total) =>
-        {
-            lock (reportLock)
-            {
-                if (cur < total && reportSw.ElapsedMilliseconds < 100)
-                    return;
-
-                long now = Stopwatch.GetTimestamp();
-
-                window.Enqueue((now, cur));
-
-                double freq = Stopwatch.Frequency;
-
-                while (window.Count > 1 && (now - window.Peek().ts) / freq > windowSec)
-                    window.Dequeue();
-
-                double mibPerSec = 0;
-                double etaSec = 0;
-
-                if (window.Count >= 2)
-                {
-                    var (ts, written) = window.Peek();
-                    double secSpan = (now - ts) / freq;
-                    long bytesSpan = cur - written;
-                    double avgSpeed = cur / ((now - startTime) / freq);
-                    double windowSpeed = secSpan > 0 ? bytesSpan / secSpan : 0;
-                    double progressRatio = total > 0 ? (double)cur / total : 0;
-                    double blendedSpeed = avgSpeed * (1 - progressRatio) + windowSpeed * progressRatio;
-
-                    mibPerSec = blendedSpeed / (1024.0 * 1024.0);
-                    etaSec = blendedSpeed > 0 ? (total - cur) / blendedSpeed : 0;
-                }
-
-                double elapsedSec = (now - startTime) / freq;
-                var elapsed = TimeSpan.FromSeconds(elapsedSec);
-                var totalEta = TimeSpan.FromSeconds(elapsedSec + Math.Max(0, etaSec));
-                int pct = total > 0 ? (int)(cur * 100 / total) : 0;
-
-                if (pct > 100) 
-                    pct = 100;
-
-                var r = Utils.CalculateProgress(cur, total, gameTitle);
-
-                progress?.Report(new ProgressInfo(pct, r.label, gameId, $"{mibPerSec:F1} MiB/s", $"{elapsed:mm\\:ss} / {totalEta:mm\\:ss}"));
-                reportSw.Restart();
-            }
-        };
     }
 }

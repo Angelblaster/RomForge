@@ -1,10 +1,10 @@
 ﻿using _3DS.Core.Crypto;
 using _3DS.Core.Models;
 using _3DS.Core.Services;
+using Common;
 using NSW.WPF.UI;
 using RomForge.Helpers;
 using RomForge.ViewModels;
-using System.Buffers.Binary;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -29,7 +29,7 @@ public partial class MainWindow : Window
             try
             {
                 string fileName = @"D:\3ds\BRAVELY DEFAULT.cci";
-                await CompareUnpackedAsync(fileName);
+                await TestRepackAsync(fileName);
             }
             catch (Exception ex)
             {
@@ -46,12 +46,15 @@ public partial class MainWindow : Window
         var ct = CancellationToken.None;
         var repackedNcchs = new Dictionary<int, (NcchUnpackResult unpack, byte[] exefsBlock, Stream ncchSource, RomFsUnpackResult? romFs)>();
 
+        var progressLog = new Progress<ProgressInfo>(info => {
+            Debug.WriteLine($"[{info.Label}] {info.Percent}% - {info.Speed} - {info.TimeInfo}");
+        });        
+
         foreach (var content in cciSource.Contents)
         {
             int idx = content.ContentIndex;
             var (ncchStream, _) = await cciSource.OpenContentDecrypted(idx);
 
-            // await using 제거! 나중에 WriteContentAsync에서 써야 하니까
             byte[] hdrBuf = new byte[NcchHeader.Size];
             await ncchStream.ReadExactlyAsync(hdrBuf, ct);
             var ncchHeader = NcchHeader.Parse(hdrBuf);
@@ -64,11 +67,14 @@ public partial class MainWindow : Window
             Debug.WriteLine($"파티션 {idx} 준비 완료");
         }
 
-        // RepackedNcsdSource로 감싸서 NcsdBuilder에 넘기기
-        var repackedSource = await RepackedNcsdSource.CreateAsync(repackedNcchs, cciSource.Contents, ct);
+        var repackedSource = await RepackedNcsdSource.CreateAsync(repackedNcchs, cciSource.Contents);
         string outputPath = fileName + "re.cci";
         await using var output = File.Open(outputPath, FileMode.Create, FileAccess.ReadWrite);
-        await NcsdBuilder.BuildAsync(repackedSource, output, null, ct);
+
+        long totalCciSize = NcsdBuilder.CalculateOutputSize(repackedSource);
+        var reporter = new ProgressReporter("젤다", "AA", totalCciSize, progressLog);
+
+        await NcsdBuilder.BuildAsync(repackedSource, output, reporter.CreateAction(), ct);
 
         Debug.WriteLine($"완료: {outputPath}");
     }
@@ -178,6 +184,8 @@ public partial class MainWindow : Window
 
         Debug.WriteLine("\n비교 완료!");
     }
+
+
 
     protected override void OnSourceInitialized(EventArgs e)
     {
