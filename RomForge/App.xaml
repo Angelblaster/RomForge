@@ -20,6 +20,7 @@
             <converters:CompressLevelTextConverter x:Key="CompressLevelTextConverter"/>            
             <converters:BoolToImageConverter x:Key="BoolToImageConverter"/>
             <converters:ProgressToStarConverter x:Key="ProgressToStarConverter"/>
+            <converters:ProgressToWidthConverter x:Key="ProgressToWidthConverter"/>            
             <wpfconverters:PbpLanguageToFlagConverter x:Key="PbpLanguageToFlagConverter"/>            
             
             <Style TargetType="TabControl">

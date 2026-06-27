@@ -100,14 +100,14 @@
                         <Border.OpacityMask>
                             <VisualBrush>
                                 <VisualBrush.Visual>
-                                    <Border Background="Black" CornerRadius="18" Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Border}}" Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Border}}" /> </VisualBrush.Visual>
+                                    <Border Background="Black" CornerRadius="15" Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Border}}" Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Border}}" /> </VisualBrush.Visual>
                             </VisualBrush>
                         </Border.OpacityMask>
                         <Grid>
                             <Image Source="{Binding Pic1Image}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" MouseLeftButtonDown="Pic1_MouseLeftButtonDown" />
                             <Grid>
                                 <Grid Width="80" Height="80" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="15" Background="Transparent" AllowDrop="True" Drop="Icon0_Drop">
-                                    <Border Width="80" Height="80" BorderBrush="#80FFFFFF" BorderThickness="1.5" CornerRadius="10" Opacity="0.8">
+                                    <Border Width="80" Height="80" BorderBrush="DimGray" BorderThickness="1.5" CornerRadius="10" Opacity="0.8">
                                         <Border.OpacityMask>
                                             <VisualBrush>
                                                 <VisualBrush.Visual>
@@ -118,7 +118,7 @@
                                         <Image Source="{Binding Icon0Image}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" MouseLeftButtonDown="Icon0_MouseLeftButtonDown" />
                                     </Border>
                                 </Grid>
-                                <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="15" MaxWidth="270" MaxHeight="150" BorderBrush="#80FFFFFF" BorderThickness="1.5" CornerRadius="12" Opacity="0.8" AllowDrop="True" Drop="Pic0_Drop">
+                                <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="15" MaxWidth="270" MaxHeight="150" BorderBrush="DimGray" BorderThickness="1.5" CornerRadius="12" Opacity="0.8" AllowDrop="True" Drop="Pic0_Drop">
                                     <Border.OpacityMask>
                                         <VisualBrush>
                                             <VisualBrush.Visual>
@@ -164,9 +164,17 @@
                         </StackPanel>
                     </Grid>
 
-                    <ProgressBar Grid.Row="1" x:Name="progress"
-                         Value="{Binding ProgressPct}"
-                         Minimum="0" Maximum="100" Height="4"/>
+                    <ProgressBar Grid.Row="1" x:Name="progress" Value="{Binding ProgressPct}" Minimum="0" Maximum="100" Height="4">
+                        <ProgressBar.Template>
+                            <ControlTemplate TargetType="ProgressBar">
+                                <Grid x:Name="progressBarGrid">
+                                    <Border Background="#25FFFFFF" CornerRadius="2"/>
+                                    <Border x:Name="PART_Track" CornerRadius="2"/>
+                                    <Border x:Name="PART_Indicator" Background="#4CAF50" CornerRadius="2" HorizontalAlignment="Left"/>
+                                </Grid>
+                            </ControlTemplate>
+                        </ProgressBar.Template>
+                    </ProgressBar>
                 </Grid>
 
             </StackPanel>

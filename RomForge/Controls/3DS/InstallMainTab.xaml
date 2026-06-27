@@ -114,14 +114,16 @@
                     VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <Grid Grid.Column="2" Height="10" VerticalAlignment="Center"
-              Visibility="{Binding ProgressPanelVisibility}">
+                <Grid Grid.Column="2" Height="10" VerticalAlignment="Center" Visibility="{Binding ProgressPanelVisibility}" x:Name="barGrid">
                     <Border Background="#25FFFFFF" CornerRadius="5"/>
                     <Border CornerRadius="5" ClipToBounds="True">
-                        <Border Background="#4CAF50" CornerRadius="5" RenderTransformOrigin="0,0.5">
-                            <Border.RenderTransform>
-                                <ScaleTransform ScaleX="{Binding Progress, Converter={StaticResource ProgressToStarConverter}, FallbackValue=0}"/>
-                            </Border.RenderTransform>
+                        <Border Background="#4CAF50" CornerRadius="5" HorizontalAlignment="Left">
+                            <Border.Width>
+                                <MultiBinding Converter="{StaticResource ProgressToWidthConverter}">
+                                    <Binding Path="ActualWidth" ElementName="barGrid"/>
+                                    <Binding Path="Progress"/>
+                                </MultiBinding>
+                            </Border.Width>
                         </Border>
                     </Border>
                 </Grid>

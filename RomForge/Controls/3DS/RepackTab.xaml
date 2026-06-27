@@ -117,58 +117,37 @@
                              Click="BtnStart_Click"/>
         </Grid>
 
-        <Border Grid.Row="4" Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="0,1,0,0" CornerRadius="8" ClipToBounds="True" Margin="0,0,0,2">
-            <StatusBar x:Name="progressArea" Background="Transparent" BorderThickness="0" Padding="8,4" Height="28">
-                <StatusBar.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="140"/>
-                            </Grid.ColumnDefinitions>
-                        </Grid>
-                    </ItemsPanelTemplate>
-                </StatusBar.ItemsPanel>
+        <Border Grid.Row="4" Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="0,1,0,0" CornerRadius="8" Margin="0,0,0,2" Padding="8,0">
+            <Grid x:Name="progressArea" Height="28">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="140"/>
+                </Grid.ColumnDefinitions>
 
-                <StatusBarItem Grid.Column="0">
-                    <TextBlock x:Name="progressLabel" Text="{Binding ProgressLabel}" Foreground="#A0A0A0" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                </StatusBarItem>
+                <TextBlock Grid.Column="0" x:Name="progressLabel" Text="{Binding ProgressLabel}" Foreground="#A0A0A0" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
 
-                <StatusBarItem Grid.Column="1" Margin="0,0,10,0">
-                    <TextBlock x:Name="progressPercent" Text="{Binding ProgressPercent}" Foreground="#4CAF50" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                </StatusBarItem>
+                <TextBlock Grid.Column="1" x:Name="progressPercent" Margin="0,0,10,0" Text="{Binding ProgressPercent}" Foreground="#4CAF50" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
 
-                <StatusBarItem Grid.Column="2" Margin="0,0,10,0">
-                    <TextBlock x:Name="progressSpeed" Text="{Binding ProgressSpeed}" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
-                </StatusBarItem>
+                <TextBlock Grid.Column="2" x:Name="progressSpeed" Margin="0,0,10,0" Text="{Binding ProgressSpeed}" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
 
-                <StatusBarItem Grid.Column="3" Margin="0,0,10,0">
-                    <TextBlock x:Name="progressTime" Text="{Binding ProgressTime}" Foreground="#4CAF50" FontSize="11" VerticalAlignment="Center"/>
-                </StatusBarItem>
-
-                <StatusBarItem Grid.Column="4" HorizontalContentAlignment="Stretch">
-                    <Grid Height="10" VerticalAlignment="Center">
-                        <Border Background="#25FFFFFF" CornerRadius="5"/>
-                        <Border CornerRadius="5">
-                            <Border.OpacityMask>
-                                <VisualBrush>
-                                    <VisualBrush.Visual>
-                                        <Border Background="White" CornerRadius="5" Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Border}}" Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Border}}"/>
-                                    </VisualBrush.Visual>
-                                </VisualBrush>
-                            </Border.OpacityMask>
-                            <Border Background="#4CAF50" CornerRadius="5" RenderTransformOrigin="0,0.5">
-                                <Border.RenderTransform>
-                                    <ScaleTransform ScaleX="{Binding ProgressPct, Converter={StaticResource ProgressToStarConverter}, FallbackValue=0}"/>
-                                </Border.RenderTransform>
-                            </Border>
+                <TextBlock Grid.Column="3" x:Name="progressTime" Margin="0,0,10,0" Text="{Binding ProgressTime}" Foreground="#4CAF50" FontSize="11" VerticalAlignment="Center"/>
+                <Grid Grid.Column="4" Height="10" VerticalAlignment="Center">
+                    <Border Background="#25FFFFFF" CornerRadius="5"/>
+                    <Border x:Name="barTrack" CornerRadius="5" ClipToBounds="True">
+                        <Border Background="#4CAF50" CornerRadius="5" HorizontalAlignment="Left">
+                            <Border.Width>
+                                <MultiBinding Converter="{StaticResource ProgressToWidthConverter}">
+                                    <Binding Path="ActualWidth" ElementName="barTrack"/>
+                                    <Binding Path="ProgressPct"/>
+                                </MultiBinding>
+                            </Border.Width>
                         </Border>
-                    </Grid>
-                </StatusBarItem>
-            </StatusBar>
+                    </Border>
+                </Grid>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

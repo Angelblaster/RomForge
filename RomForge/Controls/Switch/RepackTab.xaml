@@ -117,15 +117,25 @@
                      IsEnabled="{Binding StartEnabled}"
                      Click="BtnStart_Click"/>
             </Grid>
-
             <Grid Grid.Row="3" Margin="5,0,5,0" Visibility="{Binding IsLocked, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock Text="{Binding ProgressLabel}" Foreground="#A0A0A0" FontSize="11"/>
-                <ProgressBar Grid.Row="1" Value="{Binding ProgressPct}" Height="5" Margin="0,5,0,0"/>
+                <ProgressBar Grid.Row="1" Value="{Binding ProgressPct}" Minimum="0" Maximum="100" Height="5" Margin="0,5,0,0">
+                    <ProgressBar.Template>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Grid>
+                                <Border Background="#25FFFFFF" CornerRadius="2"/>
+                                <Border x:Name="PART_Track" CornerRadius="2"/>
+                                <Border x:Name="PART_Indicator" Background="#4CAF50" CornerRadius="2" HorizontalAlignment="Left"/>
+                            </Grid>
+                        </ControlTemplate>
+                    </ProgressBar.Template>
+                </ProgressBar>
             </Grid>
+            
         </Grid>
     </Grid>
 </UserControl>
