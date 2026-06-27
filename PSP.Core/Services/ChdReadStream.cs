@@ -1,32 +1,13 @@
 ﻿using CHD.Core.Interop;
-using CHD.Core.Models;
 
-namespace PBP.Core.Services;
+namespace PSP.Core.Services;
 
-public class ChdReadStream(LibChdrWrapper wrapper, long totalLength, ChdInfo info) : Stream
+public class ChdReadStream(LibChdrWrapper wrapper, long totalLength) : Stream
 {
     private long _position;
     private byte[]? _currentHunk;
     private uint _cachedHunkIndex = uint.MaxValue;
-    private readonly uint _sectorsPerHunk = (wrapper.Header?.hunkbytes ?? 0) / 2448u;
-    private readonly TrackInfo[] _tracks = info.Tracks;
-
-    private (long chdsector, int tracknum) PhysicalToChdLba(long physlba)
-    {
-        for (int i = 0; i < _tracks.Length - 1; i++)
-        {
-            if (physlba < _tracks[i + 1].PhysFrameOfs)
-            {
-                long chdsector = physlba - _tracks[i].PhysFrameOfs + _tracks[i].ChdFrameOfs;
-
-                return (chdsector, i);
-            }
-        }
-        return (physlba, 0);
-    }
-
-    private bool IsAudio(int tracknum) =>
-        _tracks[tracknum].TrackType?.ToUpperInvariant().Contains("AUDIO", StringComparison.InvariantCultureIgnoreCase) == true;
+    private readonly uint _sectorsPerHunk = (wrapper.Header?.hunkbytes ?? 0) / 2048u;
 
     public override int Read(byte[] buffer, int offset, int count)
     {
@@ -34,11 +15,10 @@ public class ChdReadStream(LibChdrWrapper wrapper, long totalLength, ChdInfo inf
 
         while (bytesRead < count && _position < totalLength)
         {
-            long physlba = _position / 2352;
-            int posInSector = (int)(_position % 2352);
-            var (chdsector, tracknum) = PhysicalToChdLba(physlba);
-            uint hunkIdx = (uint)(chdsector / _sectorsPerHunk);
-            int hunkOffset = (int)(chdsector % _sectorsPerHunk) * 2448;
+            long sector = _position / 2048;
+            int posInSector = (int)(_position % 2048);
+            uint hunkIdx = (uint)(sector / _sectorsPerHunk);
+            int hunkOffset = (int)(sector % _sectorsPerHunk) * 2048;
 
             if (_cachedHunkIndex != hunkIdx)
             {
@@ -49,13 +29,7 @@ public class ChdReadStream(LibChdrWrapper wrapper, long totalLength, ChdInfo inf
             if (_currentHunk == null)
                 throw new NullReferenceException(nameof(_currentHunk));
 
-            if (IsAudio(tracknum) && posInSector == 0)
-            {
-                for (int i = hunkOffset; i < hunkOffset + 2352; i += 2)
-                    (_currentHunk[i], _currentHunk[i + 1]) = (_currentHunk[i + 1], _currentHunk[i]);
-            }
-
-            int toRead = (int)Math.Min(count - bytesRead, 2352 - posInSector);
+            int toRead = (int)Math.Min(count - bytesRead, 2048 - posInSector);
 
             toRead = (int)Math.Min(toRead, totalLength - _position);
 
@@ -78,6 +52,7 @@ public class ChdReadStream(LibChdrWrapper wrapper, long totalLength, ChdInfo inf
             _ => _position
         };
         _position = Math.Clamp(_position, 0, totalLength);
+
         return _position;
     }
 

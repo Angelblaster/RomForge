@@ -140,6 +140,7 @@ public class ConverterMainViewModel : ToolTabViewModel
                 AppendLog($"총 {totalCount}개의 3DS 변환 작업을 시작합니다.", LogLevel.Highlight);
 
                 int cnt = 0;
+
                 foreach (var item in FileItems)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
@@ -150,6 +151,7 @@ public class ConverterMainViewModel : ToolTabViewModel
                     item.Status = "대기중";
                     item.Progress = 0;
                     item.Status = "변환중";
+
                     ScrollToItemRequested?.Invoke(item);
 
                     var progressHandler = new Progress<ProgressInfo>(p => { item.Progress = p.Percent; });

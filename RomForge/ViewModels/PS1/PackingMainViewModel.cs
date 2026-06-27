@@ -442,6 +442,8 @@ public class PackingMainViewModel : ToolTabViewModel
                 targetOutputPath = Path.Combine(baseDirectory, safeTitle + ".pbp");
             }
 
+            targetOutputPath = Utils.GetUniqueFilePath(targetOutputPath);
+
             var resolvedDiscs = new List<ResolvedDisc>();
 
             try

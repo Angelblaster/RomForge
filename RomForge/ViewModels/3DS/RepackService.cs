@@ -172,6 +172,7 @@ public class RepackService(Action<string, LogLevel> log, Func<string?> getPatchP
         var repackedSource = await RepackedNcsdSource.CreateAsync(repackedNcchs, source.Contents, ct);
 
         await using var outputStream = File.Open(outputCci, FileMode.Create, FileAccess.ReadWrite);
+
         await NcsdBuilder.BuildAsync(repackedSource, outputStream, reporter, ct);
 
         log($"출력: {outputCci}", LogLevel.Ok);

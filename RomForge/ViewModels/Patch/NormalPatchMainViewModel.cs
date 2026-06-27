@@ -114,6 +114,7 @@ public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
 
         string outputDir = Path.Combine(Path.GetDirectoryName(SourcePath)!, "output");
         string outputPath = Path.Combine(outputDir, Path.GetFileName(SourcePath));
+        outputPath = Utils.GetUniqueFilePath(outputPath);
 
         Log($"패치 시작: {Path.GetFileName(SourcePath)}", LogLevel.Highlight);
 

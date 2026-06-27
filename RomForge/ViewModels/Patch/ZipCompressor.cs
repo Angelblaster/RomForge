@@ -11,6 +11,7 @@ public class ZipCompressor(Action<string, LogLevel> log, Action<int> setProgress
         log($"압축 시작: {Path.GetFileName(sourcePath)}", LogLevel.Highlight);
 
         string zipPath = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(sourcePath) + ".zip");
+        zipPath = Utils.GetUniqueFilePath(zipPath);
 
         await Task.Run(() =>
         {
@@ -44,6 +45,7 @@ public class ZipCompressor(Action<string, LogLevel> log, Action<int> setProgress
         log($"압축 시작: {Path.GetFileName(sourcePath)}", LogLevel.Highlight);
 
         string zipPath = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(sourcePath) + ".zip");
+        zipPath = Utils.GetUniqueFilePath(zipPath);
 
         await Task.Run(() =>
         {

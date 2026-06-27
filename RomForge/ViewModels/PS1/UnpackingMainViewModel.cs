@@ -171,7 +171,9 @@ public class UnpackingMainViewModel : ToolTabViewModel
                                 OnProgress = percent => item.Progress = percent
                             };
 
-                            await unpacker.UnpackAsync(item.FilePath, Path.GetDirectoryName(item.FilePath), true, _cts.Token);
+                            string uniqueName = Utils.GetUniqueFilePath(item.FilePath);
+
+                            await unpacker.UnpackAsync(uniqueName, Path.GetDirectoryName(item.FilePath), true, _cts.Token);
                         }
 
                         item.Progress = 100;

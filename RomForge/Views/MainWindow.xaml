@@ -6,6 +6,7 @@
         xmlns:switch="clr-namespace:RomForge.Controls.Switch"
         xmlns:_3ds="clr-namespace:RomForge.Controls._3DS"
         xmlns:ps1="clr-namespace:RomForge.Controls.PS1"
+        xmlns:psp="clr-namespace:RomForge.Controls.PSP"
         xmlns:util="clr-namespace:RomForge.Controls.Util"
         xmlns:settings="clr-namespace:RomForge.Controls.Settings"
         xmlns:vm="clr-namespace:RomForge.ViewModels"
@@ -80,6 +81,16 @@
             <TabItem IsEnabled="{Binding IsIdle}">
                 <TabItem.Header>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Image Source="/Assets/Images/PS1.png" Width="16" Height="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="PSP" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <psp:MainTab DataContext="{Binding PSPMainVM}"/>
+            </TabItem>
+
+            <TabItem IsEnabled="{Binding IsIdle}">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <Image Source="/Assets/Images/Utility.png" Width="16" Height="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
                         <TextBlock Text="유틸" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -101,7 +112,7 @@
 
         <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" Background="#1E1E1E" Cursor="SizeNS"/>
 
-        <Border BorderBrush="#444444" BorderThickness="1" CornerRadius="10" Background="Transparent" Grid.Row="2" Visibility="Hidden">
+        <Border BorderBrush="#444444" BorderThickness="1" CornerRadius="10" Background="Transparent" Grid.Row="2">
             <RichTextBox x:Name="logBox" Style="{StaticResource LogBox}" helpers:RichTextBoxLogger.LogEntries="{Binding ActiveLogEntries}" BorderThickness="0" Background="Transparent" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"/>
         </Border>
     </Grid>
