@@ -252,7 +252,7 @@ public class NspMergeService : BaseSwitchService
 
             string finalFileName = NspNameBuilder.FileNameBuild("Merged", meta.KrTitle, meta.EnTitle, meta.TitleId, meta.DisplayVersion, meta.TitleVersion, meta.DlcCount, hasBase, hasUpdate, req.UseCompression);
 
-            finalPath = Common.Utils.GetUniqueFilePath(Path.Combine(req.OutputDir, finalFileName));
+            finalPath = Utils.GetUniqueFilePath(Path.Combine(req.OutputDir, finalFileName));
 
             while (allPaths.Any(p => string.Equals(p, finalPath, StringComparison.OrdinalIgnoreCase)) || File.Exists(finalPath))
             {

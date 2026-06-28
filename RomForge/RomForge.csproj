@@ -27,6 +27,7 @@
     <None Remove="Assets\Images\movable.sed.png" />
     <None Remove="Assets\Images\Neural.png" />
     <None Remove="Assets\Images\OpenFolder.png" />
+    <None Remove="Assets\Images\PSP.png" />
     <None Remove="Assets\Images\Repack.png" />
     <None Remove="Assets\Images\Right.png" />
     <None Remove="Assets\Images\Split.png" />
@@ -51,6 +52,7 @@
     <Resource Include="Assets\Images\movable.sed.png" />
     <Resource Include="Assets\Images\Neural.png" />
     <Resource Include="Assets\Images\OpenFolder.png" />
+    <Resource Include="Assets\Images\PSP.png" />
     <Resource Include="Assets\Images\Repack.png" />
     <Resource Include="Assets\Images\Right.png" />
     <Resource Include="Assets\Images\SD.png" />

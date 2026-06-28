@@ -258,10 +258,7 @@ public class MergeMainViewModel : ToolTabViewModel
                 for (int i = 0; i < gameFiles.Count; i++)
                 {
                     _cts.Token.ThrowIfCancellationRequested();
-                    resultCount += await SwitchSplitService.Split(
-                        gameFiles[i].FilePath, outputDir, compressLevel, UseBlockMode,
-                        VerifyCompress, ForceKeyGen0, i + 1, gameFiles.Count,
-                        progress, Log, _cts.Token);
+                    resultCount += await SwitchSplitService.Split(gameFiles[i].FilePath, outputDir, compressLevel, UseBlockMode, VerifyCompress, ForceKeyGen0, UseXCI, i + 1, gameFiles.Count, progress, Log, _cts.Token);
                 }
 
                 Log(string.Format(Res.Main_Log_AllComplete, _totalSw.Elapsed.ToString(@"mm\:ss")), LogLevel.Ok);

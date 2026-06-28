@@ -287,6 +287,7 @@ public class XciMergeService : BaseSwitchService
             finalPath = Utils.GetUniqueFilePath(Path.Combine(req.OutputDir, finalFileName));
 
             string displayName = NspNameBuilder.DisplayNameBuild(meta.EnTitle, meta.TitleId, meta.DisplayVersion, meta.DlcCount, hasBase, hasUpdate, req.UseCompression);
+            displayName = Path.ChangeExtension(finalFileName, req.UseCompression ? ".xcz" : ".xci");
 
             LocalStorage? baseStorage = xciBasePath != null ? new LocalStorage(xciBasePath, FileAccess.Read) : null;
 
