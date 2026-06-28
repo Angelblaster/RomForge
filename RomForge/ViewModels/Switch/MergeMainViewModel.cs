@@ -173,7 +173,7 @@ public class MergeMainViewModel : ToolTabViewModel
 
                 var progress = BuildProgressReporter();
                 int compressLevel = GetCompressLevel();
-                var results = await NspMergeService.Merge(inputPaths, outputDir, compressLevel, UseBlockMode, VerifyCompress, ForceKeyGen0, progress, Log, _cts.Token);
+                List<string> results = await NspMergeService.Merge(inputPaths, outputDir, compressLevel, UseBlockMode, VerifyCompress, ForceKeyGen0, progress, Log, _cts.Token);
 
                 if (results?.Count > 0)
                 {

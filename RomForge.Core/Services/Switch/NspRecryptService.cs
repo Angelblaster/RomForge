@@ -9,6 +9,7 @@ using LibHac.Tools.FsSystem;
 using LibHac.Tools.FsSystem.NcaUtils;
 using NSW.Core;
 using NSW.Utils;
+using RomZip.Core.Services;
 using System.IO;
 
 using Path = System.IO.Path;

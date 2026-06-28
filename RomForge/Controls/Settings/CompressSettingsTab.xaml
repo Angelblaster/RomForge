@@ -8,7 +8,7 @@
             <TabItem.Header>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Image Source="/Assets/Images/Mame.png" Width="16" Height="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                    <TextBlock Text="Chdman(chd)" VerticalAlignment="Center"/>
+                    <TextBlock Text="CHDMAN(chd)" VerticalAlignment="Center"/>
                 </StackPanel>
             </TabItem.Header>
             <Grid>

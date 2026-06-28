@@ -13,6 +13,7 @@ using LibHac.Tools.Ncm;
 using NSW.Core;
 using NSW.Core.Models;
 using NSW.Utils;
+using RomZip.Core.Services;
 using System.IO;
 using Path = System.IO.Path;
 using Res = NSW.Core.Properties.Resources;
@@ -145,7 +146,7 @@ public static class NspSplitService
                 var captured = cnmtNcaStorage;
                 fileEntries.Add((cnmtEntry.EntryName, async (s, onRead) =>
                 {
-                    await NcaRecryptService.RecryptAsync(captured.AsStream(), s, forceKeyGen0 ? 0 : (int)cnmtNca.Header.KeyGeneration, keySet, onRead, ct);
+                    await NcaRecryptService.RecryptAsync(captured.AsStream(), s, forceKeyGen0 ? 0 : cnmtNca.Header.KeyGeneration, keySet, onRead, ct);
                 }, cnmtSize, cnmtEntry.EntryName));
             }
 
@@ -192,7 +193,7 @@ public static class NspSplitService
                         var captured = decStorage;
                         fileEntries.Add((nczName, async (s, onRead) =>
                         {
-                            var recryptedHeader = await NcaRecryptService.GetRecryptedHeaderAsync(captured, forceKeyGen0 ? 0 : (int)nca.Header.KeyGeneration, keySet, ct);
+                            var recryptedHeader = await NcaRecryptService.GetRecryptedHeaderAsync(captured, forceKeyGen0 ? 0 : nca.Header.KeyGeneration, keySet, ct);
                             using var headerStream = new MemoryStream(recryptedHeader);
                             await converter.ConvertAsync(headerStream, captured, s, useBlockMode, compressionLevel, onRead, ct);
                         }, decSize, label));
@@ -203,7 +204,7 @@ public static class NspSplitService
                         var captured = decStorage;
                         fileEntries.Add((ncaKey, async (s, onRead) =>
                         {
-                            await NcaRecryptService.RecryptAsync(captured.AsStream(), s, forceKeyGen0 ? 0 : (int)nca.Header.KeyGeneration, keySet, onRead, ct);
+                            await NcaRecryptService.RecryptAsync(captured.AsStream(), s, forceKeyGen0 ? 0 : nca.Header.KeyGeneration, keySet, onRead, ct);
                         }, decSize, label));
                     }
                 }
@@ -216,7 +217,7 @@ public static class NspSplitService
                     converters[entryName] = converter;
                     fileEntries.Add((nczName, async (s, onRead) =>
                     {
-                        var recryptedHeader = await NcaRecryptService.GetRecryptedHeaderAsync(capturedStorage, forceKeyGen0 ? 0 : (int)nca.Header.KeyGeneration, keySet, ct);
+                        var recryptedHeader = await NcaRecryptService.GetRecryptedHeaderAsync(capturedStorage, forceKeyGen0 ? 0 : nca.Header.KeyGeneration, keySet, ct);
                         using var headerStream = new MemoryStream(recryptedHeader);
                         await converter.ConvertAsync(headerStream, capturedStorage, s, useBlockMode, compressionLevel, onRead, ct);
                     }, size, label));
@@ -227,13 +228,13 @@ public static class NspSplitService
                     var captured = currentStorage;
                     fileEntries.Add((ncaKey, async (s, onRead) =>
                     {
-                        await NcaRecryptService.RecryptAsync(captured.AsStream(), s, forceKeyGen0 ? 0 : (int)nca.Header.KeyGeneration, keySet, onRead, ct);
+                        await NcaRecryptService.RecryptAsync(captured.AsStream(), s, forceKeyGen0 ? 0 : nca.Header.KeyGeneration, keySet, onRead, ct);
                     }, size, label));
                 }
             }
 
             string outName = NspNameBuilder.SplitFileNameBuild(meta.KrTitle, meta.EnTitle, meta.TitleId, meta.GetEffectiveDisplayVersion(), typeTag, useCompression);
-            finalPath = Common.Utils.GetUniqueFilePath(Path.Combine(outputDir, outName));
+            finalPath = Utils.GetUniqueFilePath(Path.Combine(outputDir, outName));
 
             string displayName = NspNameBuilder.DisplayNameBuild(meta.EnTitle, meta.TitleId, meta.DisplayVersion);
             using var fout = File.Open(finalPath, FileMode.Create, FileAccess.ReadWrite);
