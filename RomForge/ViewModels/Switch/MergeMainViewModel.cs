@@ -33,6 +33,8 @@ public class MergeMainViewModel : ToolTabViewModel
     private string _progressPercent = string.Empty;
     private string _progressTime = string.Empty;
     private string _progressSpeed = string.Empty;
+    private bool _useNSP = true;
+    private bool _useXCI = false;
 
     public int ProgressPct
     {
@@ -68,6 +70,18 @@ public class MergeMainViewModel : ToolTabViewModel
     {
         get => _outputPath;
         set { _outputPath = value; OnPropertyChanged(); }
+    }
+
+    public bool UseNSP
+    {
+        get => _useNSP;
+        set { _useNSP = value; OnPropertyChanged(); }
+    }
+
+    public bool UseXCI
+    {
+        get => _useXCI;
+        set { _useXCI = value; OnPropertyChanged(); }
     }
 
     public bool IsMergeRunning => IsLocked && _currentMode == MergeMode.Merge;
@@ -173,12 +187,15 @@ public class MergeMainViewModel : ToolTabViewModel
 
                 var progress = BuildProgressReporter();
                 int compressLevel = GetCompressLevel();
-                List<string> results = await NspMergeService.Merge(inputPaths, outputDir, compressLevel, UseBlockMode, VerifyCompress, ForceKeyGen0, progress, Log, _cts.Token);
+
+                List<string> results = await SwitchMergeService.Merge(inputPaths, outputDir, compressLevel, UseBlockMode, VerifyCompress, ForceKeyGen0, UseNSP, progress, Log, _cts.Token);
 
                 if (results?.Count > 0)
                 {
                     Log(string.Format(Res.Main_Log_AllComplete, _totalSw.Elapsed.ToString(@"mm\:ss")), LogLevel.Ok);
                     Log(Res.Main_Msg_Done);
+
+                    outputDir.OpenFolder();
                 }
             }
             catch (OperationCanceledException)

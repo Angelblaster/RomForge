@@ -17,11 +17,14 @@ public static class NcaRecryptService
         if (nca.Header.KeyGeneration == newKeyGeneration)
         {
             inputStream.Position = 0;
+
             await Common.Utils.CopyStreamAsync(inputStream, outputStream, onRead, ct);
+
             return;
         }
 
         byte[] headerBytes = await GetRecryptedHeaderAsync(inStorage, newKeyGeneration, keySet, ct);
+
         await outputStream.WriteAsync(headerBytes, ct);
 
         long totalSize = inputStream.Length;
@@ -33,9 +36,13 @@ public static class NcaRecryptService
         while (remaining > 0)
         {
             ct.ThrowIfCancellationRequested();
+
             int readSize = (int)Math.Min(bufSize, remaining);
+
             inStorage.Read(offset, buf.AsSpan(0, readSize)).ThrowIfFailure();
+
             await outputStream.WriteAsync(buf.AsMemory(0, readSize), ct);
+
             onRead?.Invoke(readSize);
             offset += readSize;
             remaining -= readSize;
@@ -47,10 +54,9 @@ public static class NcaRecryptService
     public static async Task<byte[]> GetRecryptedHeaderAsync(IStorage inStorage, int newKeyGeneration, KeySet keySet, CancellationToken ct = default)
     {
         var nca = new Nca(keySet, inStorage);
-
         var libHacHdr = nca.Header;
-
         byte[] headerBytes = new byte[0xC00];
+
         nca.OpenDecryptedHeaderStorage().Read(0, headerBytes).ThrowIfFailure();
 
         if (newKeyGeneration <= 2)
@@ -69,6 +75,7 @@ public static class NcaRecryptService
 
         if (hasTitleKey && newKeyGeneration == 0)
             ConvertToTicketless(headerBytes, nca, libHacHdr, keySet, newKeyGenIdx);
+
         else if (!hasTitleKey)
         {
             int oldKeyGenIdx = Math.Max((int)libHacHdr.KeyGeneration, 1) - 1;
@@ -79,8 +86,11 @@ public static class NcaRecryptService
             {
                 int keyOffset = 0x300 + k * 0x10;
                 byte[] key = new byte[0x10];
+
                 Array.Copy(headerBytes, keyOffset, key, 0, 0x10);
-                if (key.All(b => b == 0)) continue;
+
+                if (key.All(b => b == 0)) 
+                    continue;
 
                 LibHac.Crypto.Aes.DecryptEcb128(key.AsSpan(), key.AsSpan(), oldKaek.DataRo);
                 LibHac.Crypto.Aes.EncryptEcb128(key.AsSpan(), key.AsSpan(), newKaek.DataRo);
@@ -93,6 +103,7 @@ public static class NcaRecryptService
         byte[] key1 = keySet.HeaderKey.SubKeys[0].DataRo.ToArray();
         byte[] key2 = keySet.HeaderKey.SubKeys[1].DataRo.ToArray();
         var transform = new Aes128XtsTransform(key1, key2, false);
+
         for (int sector = 0; sector < 6; sector++)
             transform.TransformBlock(headerBytes, sector * 0x200, 0x200, (ulong)sector);
 
@@ -105,6 +116,7 @@ public static class NcaRecryptService
         var newKaek = keySet.KeyAreaKeys[newKeyGenIdx][libHacHdr.KeyAreaKeyIndex];
 
         byte[] encryptedTitleKey = new byte[0x10];
+
         Array.Copy(titleKey, encryptedTitleKey, 0x10);
         LibHac.Crypto.Aes.EncryptEcb128(encryptedTitleKey.AsSpan(), encryptedTitleKey.AsSpan(), newKaek.DataRo);
 

@@ -11,18 +11,14 @@ using NSW.Core;
 using NSW.Utils;
 using RomZip.Core.Services;
 using System.IO;
-
 using Path = System.IO.Path;
 using Res = NSW.Core.Properties.Resources;
 
 namespace RomForge.Core.Services.Switch;
 
-public static class NspRecryptService
+public class NspRecryptService : BaseSwitchService
 {
     public static async Task<List<string>> Recrypt(IReadOnlyList<string> inputPaths, bool forceKeyGen0, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
-        => await ExecuteProcess(inputPaths, forceKeyGen0, progress, log, ct);
-
-    private static async Task<List<string>> ExecuteProcess(IReadOnlyList<string> inputPaths, bool forceKeyGen0, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct)
     {
         var ks = KeySetProvider.Instance.KeySet.Clone();
         var processedFiles = new List<string>();
@@ -34,17 +30,14 @@ public static class NspRecryptService
 
             try
             {
-                log?.Invoke($"[{i + 1}/{inputPaths.Count}] Recrypt {Res.Log_ProcessStart}: {Path.GetFileName(path)}", LogLevel.Info, inputPaths[i]);
+                log?.Invoke($"[{i + 1}/{inputPaths.Count}] Recrypt {Res.Log_ProcessStart}: {Path.GetFileName(path)}", LogLevel.Info, path);
 
-                string resultPath = await RunCoreAsync(path, forceKeyGen0, ks, progress, log, ct);
+                string resultPath = await RunCoreAsync(path, forceKeyGen0, ks.Clone(), progress, log, ct);
 
                 if (!string.IsNullOrEmpty(resultPath))
                     processedFiles.Add(resultPath);
             }
-            catch (OperationCanceledException) 
-            {
-                throw;
-            }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 log?.Invoke($"{Path.GetFileName(path)} {Res.Log_ProcessError}: {ex.Message}", LogLevel.Error, string.Empty);
@@ -70,13 +63,50 @@ public static class NspRecryptService
             var meta = metas.First();
             var sourceStorage = new LocalStorage(inputPath, FileAccess.Read);
             disposables.Add(sourceStorage);
-            IFileSystem sourceFs = sourceStorage.OpenFileSystem(keySet, inputPath);
-            disposables.Add(sourceFs);
-            keySet.RegisterTickets(sourceFs);
 
             string inputExt = Path.GetExtension(inputPath).ToLowerInvariant();
-            string outputExt = inputExt is ".nsz" or ".xcz" ? ".nsz" : ".nsp";
+            string outputExt = inputExt switch
+            {
+                ".nsz" => ".nsz",
+                ".xci" => ".xci",
+                ".xcz" => ".xcz",
+                _ => ".nsp"
+            };
+
             finalPath = Utils.GetUniqueFilePath(Path.ChangeExtension(inputPath, outputExt));
+
+            IFileSystem sourceFs;
+            List<(string Name, ulong AbsOffset, ulong Size, byte[] Hash, uint HashTargetSize)>? rootEntriesTemplate = null;
+            Stream? srcStream = null;
+            byte[]? xciPrefixBuffer = null;
+
+            if (inputExt is ".xci" or ".xcz")
+            {
+                var xci = new Xci(keySet, sourceStorage);
+                var rootPartition = xci.OpenPartition(XciPartitionType.Root);
+                disposables.Add(rootPartition);
+
+                sourceFs = xci.OpenPartition(XciPartitionType.Secure);
+                disposables.Add(sourceFs);
+
+                rootEntriesTemplate = [.. rootPartition
+                    .EnumerateEntries("/", "*")
+                    .Select(e =>
+                    {
+                        var (absOffset, size, hash, hashTargetSize) = rootPartition.GetEntryInfo(e.Name.ToString());
+                        return (e.Name.ToString(), (ulong)absOffset, (ulong)size, hash, hashTargetSize);
+                    })];
+
+                xciPrefixBuffer = GetXciPrefix([inputPath]);
+                srcStream = sourceStorage.AsStream();
+            }
+            else
+            {
+                sourceFs = sourceStorage.OpenFileSystem(keySet, inputPath);
+                disposables.Add(sourceFs);
+            }
+
+            keySet.RegisterTickets(sourceFs);
 
             var fileEntries = new List<(string Name, Func<Stream, Action<long>, Task> Writer, long EstimatedSize, string Label)>();
 
@@ -99,52 +129,59 @@ public static class NspRecryptService
                 {
                     if (!forceKeyGen0)
                     {
-                        var capturedStorage = currentStorage;
-                        fileEntries.Add((entryName, async (s, onRead) => await Common.Utils.CopyStreamAsync(capturedStorage.AsStream(), s, onRead, ct), size, entryName));
+                        var cap = currentStorage;
+                        fileEntries.Add((entryName, async (s, onRead) => await Common.Utils.CopyStreamAsync(cap.AsStream(), s, onRead, ct), size, entryName));
                     }
                     continue;
                 }
 
                 if (entryExt is not ".nca" and not ".ncz")
                 {
-                    var capturedStorage = currentStorage;
-                    fileEntries.Add((entryName, async (s, onRead) => await Common.Utils.CopyStreamAsync(capturedStorage.AsStream(), s, onRead, ct), size, entryName));
+                    var cap = currentStorage;
+                    fileEntries.Add((entryName, async (s, onRead) => await Common.Utils.CopyStreamAsync(cap.AsStream(), s, onRead, ct), size, entryName));
                     continue;
                 }
 
-                IStorage ncaStorage = currentStorage;
-                string ncaName = entryName;
-                long ncaSize = size;
-
-                var nca = new Nca(keySet, ncaStorage);
+                var nca = new Nca(keySet, currentStorage);
                 int keyGeneration = (int)nca.Header.KeyGeneration;
                 string label = $"{meta.KrTitle ?? meta.EnTitle} [{nca.Header.ContentType}]";
-                var capturedNcaStorage = ncaStorage;
+                var capStorage = currentStorage;
 
-                fileEntries.Add((ncaName, async (s, onRead) =>
+                fileEntries.Add((entryName, async (s, onRead) =>
                 {
-                    await NcaRecryptService.RecryptAsync(capturedNcaStorage.AsStream(), s, forceKeyGen0 ? 0 : keyGeneration, keySet, onRead, ct);
-                }, ncaSize, $"{label} [Recrypting]"));
+                    await NcaRecryptService.RecryptAsync(capStorage.AsStream(), s, forceKeyGen0 ? 0 : keyGeneration, keySet, onRead, ct);
+                }, size, $"{label} [Recrypting]"));
             }
 
             string displayName = $"Recrypt {NspNameBuilder.CompressDisplayNameBuild(meta.KrTitle, meta.TitleId, meta.DisplayVersion)}";
-            var fout = File.Open(finalPath, FileMode.Create, FileAccess.ReadWrite);
-            disposables.Add(fout);
 
-            await Pfs0Builder.WriteAsync(displayName, Path.GetFileNameWithoutExtension(finalPath), fileEntries, fout, 0x20, progress, ct);
+            if (inputExt is ".xci" or ".xcz")
+            {
+                using var fout = File.Open(finalPath, FileMode.Create, FileAccess.ReadWrite);
+                await WriteXciAsync(displayName, meta.TitleId, xciPrefixBuffer!, rootEntriesTemplate!, srcStream, fileEntries, fout, progress, ct);
+            }
+            else
+            {
+                var fout = File.Open(finalPath, FileMode.Create, FileAccess.ReadWrite);
+                disposables.Add(fout);
+                await Pfs0Builder.WriteAsync(displayName, Path.GetFileNameWithoutExtension(finalPath), fileEntries, fout, 0x20, progress, ct);
+            }
 
             isCompleted = true;
-
             log?.Invoke($"{Path.GetFileName(finalPath)} Recrypt {Res.Log_StatusDone}", LogLevel.Ok, meta.TitleId);
 
             return finalPath;
         }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            log?.Invoke($"{Path.GetFileName(inputPath)} {Res.Log_ProcessError}: {ex.Message}", LogLevel.Error, string.Empty);
+            throw;
+        }
         finally
         {
             for (int i = disposables.Count - 1; i >= 0; i--) disposables[i]?.Dispose();
-
-            if (!isCompleted && !string.IsNullOrEmpty(finalPath) && File.Exists(finalPath))
-                try { File.Delete(finalPath); } catch { }
+            if (!isCompleted) CleanupOnFailure(finalPath, log, string.Empty);
         }
     }
 }

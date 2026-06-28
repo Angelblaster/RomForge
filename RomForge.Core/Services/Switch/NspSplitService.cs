@@ -20,22 +20,51 @@ using Res = NSW.Core.Properties.Resources;
 
 namespace RomForge.Core.Services.Switch;
 
-public static class NspSplitService
+public class NspSplitService : BaseSwitchService
 {
-    public static async Task<int> Split(string sourceNspPath, string outputDir, int compressionLevel, bool useBlockMode, bool isValidationEnabled, bool forceKeyGen0, int index, int groupCount, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
+    public static async Task<int> Split(string sourcePath, string outputDir, int compressionLevel, bool useBlockMode, bool isValidationEnabled, bool forceKeyGen0, int index, int groupCount, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
     {
         var keySet = KeySetProvider.Instance.KeySet.Clone();
-        var allMetas = MetadataReader.GetMetadataFromContainer(keySet, sourceNspPath);
+        var allMetas = MetadataReader.GetMetadataFromContainer(keySet, sourcePath);
         var disposables = new List<IDisposable>();
         bool useCompression = compressionLevel > 0;
         int successCount = 0;
 
         try
         {
-            var storage = new LocalStorage(sourceNspPath, FileAccess.Read);
+            var storage = new LocalStorage(sourcePath, FileAccess.Read);
             disposables.Add(storage);
-            var fs = storage.OpenFileSystem(keySet, sourceNspPath);
-            disposables.Add(fs);
+
+            string inputExt = Path.GetExtension(sourcePath).ToLowerInvariant();
+            IFileSystem fs;
+            List<(string Name, ulong AbsOffset, ulong Size, byte[] Hash, uint HashTargetSize)>? rootEntriesTemplate = null;
+            byte[]? xciPrefixBuffer = null;
+
+            if (inputExt is ".xci" or ".xcz")
+            {
+                var xci = new Xci(keySet, storage);
+                var rootPartition = xci.OpenPartition(XciPartitionType.Root);
+                disposables.Add(rootPartition);
+
+                fs = xci.OpenPartition(XciPartitionType.Secure);
+                disposables.Add(fs);
+
+                rootEntriesTemplate = [.. rootPartition
+                    .EnumerateEntries("/", "*")
+                    .Select(e =>
+                    {
+                        var (absOffset, size, hash, hashTargetSize) = rootPartition.GetEntryInfo(e.Name.ToString());
+                        return (e.Name.ToString(), (ulong)absOffset, (ulong)size, hash, hashTargetSize);
+                    })];
+
+                xciPrefixBuffer = GetXciPrefix([sourcePath]);
+            }
+            else
+            {
+                fs = storage.OpenFileSystem(keySet, sourcePath);
+                disposables.Add(fs);
+            }
+
             keySet.RegisterTickets(fs);
 
             var fileRegistry = new Dictionary<string, (string EntryName, string Ext)>(StringComparer.OrdinalIgnoreCase);
@@ -53,7 +82,6 @@ public static class NspSplitService
                 }
 
                 string finalName = entryExt == ".ncz" ? Path.ChangeExtension(entryName, ".nca") : entryName;
-
                 if (!fileRegistry.TryGetValue(finalName, out var value) || (value.Ext == ".ncz" && entryExt == ".nca"))
                     fileRegistry[finalName] = (entryName, entryExt);
             }
@@ -71,7 +99,7 @@ public static class NspSplitService
             {
                 ct.ThrowIfCancellationRequested();
 
-                if (await ProcessSplitItem(meta, fileRegistry, tikRegistry, fs, keySet, cachedBaseTitle, outputDir, useCompression, compressionLevel, useBlockMode, isValidationEnabled, forceKeyGen0, index, groupCount, progress, log, ct))
+                if (await ProcessSplitItem(meta, fileRegistry, tikRegistry, fs, keySet, cachedBaseTitle, sourcePath, outputDir, useCompression, compressionLevel, useBlockMode, isValidationEnabled, forceKeyGen0, inputExt, xciPrefixBuffer, rootEntriesTemplate, index, groupCount, progress, log, ct))
                     successCount++;
             }
         }
@@ -84,7 +112,7 @@ public static class NspSplitService
         return successCount;
     }
 
-    private static async Task<bool> ProcessSplitItem(MetadataResult meta, Dictionary<string, (string EntryName, string Ext)> fileRegistry, Dictionary<string, (string EntryName, string Ext)> tikRegistry, IFileSystem fs, KeySet keySet, string baseTitle, string outputDir, bool useCompression, int compressionLevel, bool useBlockMode, bool isValidationEnabled, bool forceKeyGen0, int index, int groupCount, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct)
+    private static async Task<bool> ProcessSplitItem(MetadataResult meta, Dictionary<string, (string EntryName, string Ext)> fileRegistry, Dictionary<string, (string EntryName, string Ext)> tikRegistry, IFileSystem fs, KeySet keySet, string baseTitle, string sourcePath, string outputDir, bool useCompression, int compressionLevel, bool useBlockMode, bool isValidationEnabled, bool forceKeyGen0, string inputExt, byte[]? xciPrefixBuffer, List<(string Name, ulong AbsOffset, ulong Size, byte[] Hash, uint HashTargetSize)>? rootEntriesTemplate, int index, int groupCount, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct)
     {
         var disposables = new List<IDisposable>();
         var converters = new Dictionary<string, NcaToNczConverter>(StringComparer.OrdinalIgnoreCase);
@@ -94,7 +122,6 @@ public static class NspSplitService
         try
         {
             string typeTag = meta.GetTypeTag();
-            string displayVer = meta.GetEffectiveDisplayVersion();
             log?.Invoke($"{string.Format(Res.Log_SplitPreparing, $"{baseTitle} [{typeTag}]")} ({index}/{groupCount})", LogLevel.Highlight, meta.TitleId);
 
             if (!fileRegistry.TryGetValue(meta.FileName, out var cnmtEntry))
@@ -117,7 +144,6 @@ public static class NspSplitService
             var cnmt = new Cnmt(cFile.Get.AsStream());
 
             var fileEntries = new List<(string Name, Func<Stream, Action<long>, Task> Writer, long EstimatedSize, string Label)>();
-
             string titleIdHex = meta.TitleId.ToUpper();
 
             if (!forceKeyGen0)
@@ -136,36 +162,31 @@ public static class NspSplitService
                     IStorage tikStorage = new FileStorage(rawFile);
                     disposables.Add(tikStorage);
                     tikStorage.GetSize(out long tikSize).ThrowIfFailure();
-                    var captured = tikStorage;
-                    fileEntries.Add((kvp.Value.EntryName, async (s, onRead) => await Common.Utils.CopyStreamAsync(captured.AsStream(), s, onRead, ct), tikSize, kvp.Value.EntryName));
+                    var cap = tikStorage;
+                    fileEntries.Add((kvp.Value.EntryName, async (s, onRead) => await Common.Utils.CopyStreamAsync(cap.AsStream(), s, onRead, ct), tikSize, kvp.Value.EntryName));
                 }
             }
 
+            cnmtNcaStorage.GetSize(out long cnmtSize).ThrowIfFailure();
+            var cnmtCap = cnmtNcaStorage;
+            fileEntries.Add((cnmtEntry.EntryName, async (s, onRead) =>
             {
-                cnmtNcaStorage.GetSize(out long cnmtSize).ThrowIfFailure();
-                var captured = cnmtNcaStorage;
-                fileEntries.Add((cnmtEntry.EntryName, async (s, onRead) =>
-                {
-                    await NcaRecryptService.RecryptAsync(captured.AsStream(), s, forceKeyGen0 ? 0 : cnmtNca.Header.KeyGeneration, keySet, onRead, ct);
-                }, cnmtSize, cnmtEntry.EntryName));
-            }
+                await NcaRecryptService.RecryptAsync(cnmtCap.AsStream(), s, forceKeyGen0 ? 0 : cnmtNca.Header.KeyGeneration, keySet, onRead, ct);
+            }, cnmtSize, cnmtEntry.EntryName));
 
             foreach (var record in cnmt.ContentEntries)
             {
                 ct.ThrowIfCancellationRequested();
                 string targetId = BitConverter.ToString(record.NcaId).Replace("-", string.Empty).ToLower();
+                string? ncaKey = fileRegistry.Keys.FirstOrDefault(k =>
+                    Path.GetFileNameWithoutExtension(k).StartsWith(targetId, StringComparison.OrdinalIgnoreCase));
 
-                string ncaKey = fileRegistry.Keys.FirstOrDefault(k =>
-                    Path.GetFileNameWithoutExtension(k).StartsWith(targetId, StringComparison.OrdinalIgnoreCase)).ToString();
-
-                if (ncaKey == null) 
-                    continue;
+                if (ncaKey == null) continue;
 
                 var (entryName, originalExt) = fileRegistry[ncaKey];
-
                 var fileRef = new UniqueRef<IFile>();
 
-                if (fs.OpenFile(ref fileRef.Ref, ("/" + entryName).ToU8Span(), OpenMode.Read).IsFailure()) 
+                if (fs.OpenFile(ref fileRef.Ref, ("/" + entryName).ToU8Span(), OpenMode.Read).IsFailure())
                     continue;
 
                 IFile rawFile = fileRef.Release();
@@ -178,95 +199,57 @@ public static class NspSplitService
                 string ncaContentType = nca.Header.ContentType.ToString();
                 string label = $"{baseTitle} [{typeTag}/{ncaContentType}]";
 
-                if (originalExt == ".ncz")
-                {
-                    var ncz = new Ncz(keySet, currentStorage, NczReadMode.Original);
-                    var decStorage = ncz.BaseStorage;
-                    decStorage.GetSize(out long decSize).ThrowIfFailure();
+                var result = BuildFileEntry(entryName, originalExt, currentStorage, size, nca, label, useCompression, useBlockMode, compressionLevel, forceKeyGen0, keySet, converters, ct);
 
-                    if (useCompression && nca.Header.ContentType is NcaContentType.Program or NcaContentType.PublicData)
-                    {
-                        string nczName = nca.HasSparseLayer() ? entryName : Path.ChangeExtension(entryName, ".ncz");
-                        log?.Invoke($"- {label} {Res.Log_CompressAndSplit}", LogLevel.Info, meta.TitleId);
-                        var converter = new NcaToNczConverter(keySet);
-                        converters[entryName] = converter;
-                        var captured = decStorage;
-                        fileEntries.Add((nczName, async (s, onRead) =>
-                        {
-                            var recryptedHeader = await NcaRecryptService.GetRecryptedHeaderAsync(captured, forceKeyGen0 ? 0 : nca.Header.KeyGeneration, keySet, ct);
-                            using var headerStream = new MemoryStream(recryptedHeader);
-                            await converter.ConvertAsync(headerStream, captured, s, useBlockMode, compressionLevel, onRead, ct);
-                        }, decSize, label));
-                    }
-                    else
-                    {
-                        log?.Invoke($"- {label} {Res.Log_Splitting}", LogLevel.Info, meta.TitleId);
-                        var captured = decStorage;
-                        fileEntries.Add((ncaKey, async (s, onRead) =>
-                        {
-                            await NcaRecryptService.RecryptAsync(captured.AsStream(), s, forceKeyGen0 ? 0 : nca.Header.KeyGeneration, keySet, onRead, ct);
-                        }, decSize, label));
-                    }
-                }
-                else if (useCompression && nca.Header.ContentType is NcaContentType.Program or NcaContentType.PublicData)
-                {
-                    string nczName = nca.HasSparseLayer() ? entryName : Path.ChangeExtension(entryName, ".ncz");
-                    log?.Invoke($"- {label} {Res.Log_CompressAndSplit}", LogLevel.Info, meta.TitleId);
-                    var capturedStorage = currentStorage;
-                    var converter = new NcaToNczConverter(keySet);
-                    converters[entryName] = converter;
-                    fileEntries.Add((nczName, async (s, onRead) =>
-                    {
-                        var recryptedHeader = await NcaRecryptService.GetRecryptedHeaderAsync(capturedStorage, forceKeyGen0 ? 0 : nca.Header.KeyGeneration, keySet, ct);
-                        using var headerStream = new MemoryStream(recryptedHeader);
-                        await converter.ConvertAsync(headerStream, capturedStorage, s, useBlockMode, compressionLevel, onRead, ct);
-                    }, size, label));
-                }
-                else
-                {
-                    log?.Invoke($"- {label} {Res.Log_Splitting}", LogLevel.Info, meta.TitleId);
-                    var captured = currentStorage;
-                    fileEntries.Add((ncaKey, async (s, onRead) =>
-                    {
-                        await NcaRecryptService.RecryptAsync(captured.AsStream(), s, forceKeyGen0 ? 0 : nca.Header.KeyGeneration, keySet, onRead, ct);
-                    }, size, label));
-                }
+                if (result == null) continue;
+
+                log?.Invoke($"- {label} {(originalExt == ".ncz" && useCompression ? Res.Log_CompressAndSplit : result.Value.FinalName.EndsWith(".ncz") ? Res.Log_CompressAndSplit : Res.Log_Splitting)}", LogLevel.Info, meta.TitleId);
+                fileEntries.Add((result.Value.FinalName, result.Value.Writer, result.Value.Size, result.Value.Label));
             }
 
             string outName = NspNameBuilder.SplitFileNameBuild(meta.KrTitle, meta.EnTitle, meta.TitleId, meta.GetEffectiveDisplayVersion(), typeTag, useCompression);
             finalPath = Utils.GetUniqueFilePath(Path.Combine(outputDir, outName));
-
             string displayName = NspNameBuilder.DisplayNameBuild(meta.EnTitle, meta.TitleId, meta.DisplayVersion);
-            using var fout = File.Open(finalPath, FileMode.Create, FileAccess.ReadWrite);
-            await Pfs0Builder.WriteAsync($"{Res.Log_Splitting} {displayName}", meta.TitleId, fileEntries, fout, 0x20, progress, ct);
 
-            if (useCompression && converters.Count > 0 && isValidationEnabled)
+            if (inputExt is ".xci" or ".xcz")
             {
-                log?.Invoke($"{baseTitle} [{typeTag}] {Res.Log_ValidationStart} ({index}/{groupCount})", LogLevel.Highlight, meta.TitleId);
-                fout.Position = 0;
-                var validationFs = new PartitionFileSystem();
-                validationFs.Initialize(fout.AsStorage()).ThrowIfFailure();
-                var nczEntries = validationFs.EnumerateEntries("/", "*.ncz")
-                    .Where(e => converters.ContainsKey(Path.ChangeExtension(e.Name, ".nca")))
-                    .ToList();
-                long totalValidationSize = nczEntries.Sum(e => e.Size);
+                using var fout = File.Open(finalPath, FileMode.Create, FileAccess.ReadWrite);
+                Stream? srcStream = new LocalStorage(sourcePath, FileAccess.Read).AsStream();
+                await WriteXciAsync(displayName, meta.TitleId, xciPrefixBuffer!, rootEntriesTemplate!, srcStream, fileEntries, fout, progress, ct);
+            }
+            else
+            {
+                using var fout = File.Open(finalPath, FileMode.Create, FileAccess.ReadWrite);
+                await Pfs0Builder.WriteAsync($"{Res.Log_Splitting} {displayName}", meta.TitleId, fileEntries, fout, 0x20, progress, ct);
 
-                foreach (var entry in nczEntries)
+                if (useCompression && converters.Count > 0 && isValidationEnabled)
                 {
-                    ct.ThrowIfCancellationRequested();
-                    string origName = Path.ChangeExtension(entry.Name, ".nca");
+                    log?.Invoke($"{baseTitle} [{typeTag}] {Res.Log_ValidationStart} ({index}/{groupCount})", LogLevel.Highlight, meta.TitleId);
+                    fout.Position = 0;
+                    var validationFs = new PartitionFileSystem();
+                    validationFs.Initialize(fout.AsStorage()).ThrowIfFailure();
+                    var nczEntries = validationFs.EnumerateEntries("/", "*.ncz")
+                        .Where(e => converters.ContainsKey(Path.ChangeExtension(e.Name, ".nca")))
+                        .ToList();
+                    long totalValidationSize = nczEntries.Sum(e => e.Size);
 
-                    if (!converters.TryGetValue(origName, out var converter)) 
-                        continue;
+                    foreach (var entry in nczEntries)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        string origName = Path.ChangeExtension(entry.Name, ".nca");
+                        if (!converters.TryGetValue(origName, out var converter)) 
+                            continue;
 
-                    using var nczFile = new UniqueRef<IFile>();
-                    validationFs.OpenFile(ref nczFile.Ref, entry.FullPath.ToU8Span(), OpenMode.Read).ThrowIfFailure();
-                    string vlabel = $"{baseTitle} [{typeTag}]";
-                    log?.Invoke($"- {vlabel} {Res.ToolTip_ValidateCompress}", LogLevel.Info, meta.TitleId);
-                    await converter.ValidateAsync(nczFile.Get.AsStream(), meta.TitleId, totalValidationSize, vlabel, progress, ct);
-                    log?.Invoke($"- {vlabel} OK", LogLevel.Ok, meta.TitleId);
+                        using var nczFile = new UniqueRef<IFile>();
+                        validationFs.OpenFile(ref nczFile.Ref, entry.FullPath.ToU8Span(), OpenMode.Read).ThrowIfFailure();
+                        string vlabel = $"{baseTitle} [{typeTag}]";
+                        log?.Invoke($"- {vlabel} {Res.ToolTip_ValidateCompress}", LogLevel.Info, meta.TitleId);
+                        await converter.ValidateAsync(nczFile.Get.AsStream(), meta.TitleId, totalValidationSize, vlabel, progress, ct);
+                        log?.Invoke($"- {vlabel} OK", LogLevel.Ok, meta.TitleId);
+                    }
+
+                    log?.Invoke($"{baseTitle} [{typeTag}] {Res.Log_ValidationComplete} ({index}/{groupCount})", LogLevel.Ok, meta.TitleId);
                 }
-                log?.Invoke($"{baseTitle} [{typeTag}] {Res.Log_ValidationComplete} ({index}/{groupCount})", LogLevel.Ok, meta.TitleId);
             }
 
             isCompleted = true;
@@ -274,23 +257,16 @@ public static class NspSplitService
 
             return true;
         }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             log?.Invoke($"{string.Format(Res.Log_SplitFailed, meta.TitleId, ex.Message)} ({index}/{groupCount})", LogLevel.Error, meta.TitleId);
-
             return false;
         }
         finally
         {
-            for (int i = disposables.Count - 1; i >= 0; i--)
-                disposables[i]?.Dispose();
-
-            if (!isCompleted && !string.IsNullOrEmpty(finalPath) && File.Exists(finalPath))
-                try { File.Delete(finalPath); } catch { }
+            for (int i = disposables.Count - 1; i >= 0; i--) disposables[i]?.Dispose();
+            if (!isCompleted) CleanupOnFailure(finalPath, log, meta.TitleId);
         }
     }
 }
