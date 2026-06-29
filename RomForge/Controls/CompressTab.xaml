@@ -150,8 +150,8 @@
             </Border.Background>
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.85">
                 <Image Source="/Assets/Images/drag.png" Width="28" Height="28" Margin="0,0,0,8"/>
-                <TextBlock Text="파일 또는 폴더를 여기에 드래그하세요" Foreground="White" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
-
+                <TextBlock Text="파일 또는 폴더를 여기에 드래그&amp;드롭하세요" Foreground="LightGray" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+                <TextBlock Text="하기 기준으로 압축 또는 해제합니다" Foreground="#D4AF37" FontSize="13" FontWeight="Bold" Margin="0,8,0,0" HorizontalAlignment="Center"/>
                 <TextBlock TextAlignment="Left" Foreground="#A0A0A0" FontSize="11" Margin="0,15,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>

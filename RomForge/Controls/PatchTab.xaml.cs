@@ -41,7 +41,19 @@ public partial class PatchTab : UserControl
     private void NormalSourceDrop_Drop(object sender, DragEventArgs e)
     {
         if (e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
-            ViewModel.PatchVM.NormalVM.SourcePath = files[0];
+        {
+            var patchFiles = files
+            .Where(f => PatchExtensions.AllowedExtensions.Contains(Path.GetExtension(f).ToLower()))
+            .ToList();
+
+            var sourceFiles = files.Except(patchFiles).ToList();
+
+            if (patchFiles.Count > 0)
+                ViewModel.PatchVM.NormalVM.PatchPath = patchFiles[0];
+
+            if (sourceFiles.Count > 0)
+                ViewModel.PatchVM.NormalVM.SourcePath = sourceFiles[0];
+        }
     }
 
     private void NormalPatchDrop_Click(object sender, MouseButtonEventArgs e)
@@ -60,11 +72,17 @@ public partial class PatchTab : UserControl
     {
         if (e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
         {
-            string filePath = files[0];
-            string extension = Path.GetExtension(filePath).ToLower();
+            var patchFiles = files
+                .Where(f => PatchExtensions.AllowedExtensions.Contains(Path.GetExtension(f).ToLower()))
+                .ToList();
 
-            if (PatchExtensions.AllowedExtensions.Contains(extension))
-                ViewModel.PatchVM.NormalVM.PatchPath = filePath;
+            var sourceFiles = files.Except(patchFiles).ToList();
+
+            if (patchFiles.Count > 0)
+                ViewModel.PatchVM.NormalVM.PatchPath = patchFiles[0];
+
+            if (sourceFiles.Count > 0)
+                ViewModel.PatchVM.NormalVM.SourcePath = sourceFiles[0];
         }
     }
 

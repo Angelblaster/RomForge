@@ -246,8 +246,45 @@
                 </Border.Background>
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.85">
                     <Image Source="/Assets/Images/drag.png" Width="28" Height="28" Margin="0,0,0,8"/>
-                    <TextBlock Text="파일 또는 폴더를 여기에 드래그하세요" Foreground="White" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="(지원 확장자 : 3ds, cci, cia, zcci)" Foreground="#A0A0A0" FontSize="12" Margin="0,6,0,0" HorizontalAlignment="Center"/>
+                    <TextBlock Text="파일 또는 폴더를 여기에 드래그&amp;드롭하세요" Foreground="LightGray" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <TextBlock Text="하기 파일 포멧을 상호 변환합니다" Foreground="#D4AF37" FontSize="13" FontWeight="Bold" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                    <ItemsControl HorizontalAlignment="Center" Margin="0,5,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.Items>
+                            <Border Background="#1A4D56B2" BorderBrush="#4D4D56B2" BorderThickness="1" CornerRadius="6" Padding="10,4" Margin="4,0">
+                                <TextBlock Text="3DS" Foreground="#8FA3FF" FontWeight="Bold" FontSize="11" VerticalAlignment="Center">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="4" ShadowDepth="0" Color="#8FA3FF" Opacity="0.4"/>
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </Border>
+                            <Border Background="#1A9E5B24" BorderBrush="#559E5B24" BorderThickness="1" CornerRadius="6" Padding="10,4" Margin="4,0">
+                                <TextBlock Text="CCI" Foreground="#FFA254" FontWeight="Bold" FontSize="11" VerticalAlignment="Center">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="4" ShadowDepth="0" Color="#FFA254" Opacity="0.4"/>
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </Border>
+                            <Border Background="#1A9E2469" BorderBrush="#559E2469" BorderThickness="1" CornerRadius="6" Padding="10,4" Margin="4,0">
+                                <TextBlock Text="CIA" Foreground="#FF73C9" FontWeight="Bold" FontSize="11" VerticalAlignment="Center">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="4" ShadowDepth="0" Color="#FF73C9" Opacity="0.4"/>
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </Border>
+                            <Border Background="#1A1B8A5A" BorderBrush="#551B8A5A" BorderThickness="1" CornerRadius="6" Padding="10,4" Margin="4,0">
+                                <TextBlock Text="ZCCI" Foreground="#54FFB5" FontWeight="Bold" FontSize="11" VerticalAlignment="Center">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="4" ShadowDepth="0" Color="#54FFB5" Opacity="0.4"/>
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </Border>
+                        </ItemsControl.Items>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
         </Grid>
