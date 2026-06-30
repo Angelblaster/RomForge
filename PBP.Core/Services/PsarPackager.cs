@@ -4,7 +4,7 @@ namespace PBP.Core.Services;
 
 public static class PsarPackager
 {
-    public static void WritePsar(Stream outputStream, string mainGameTitle, string mainGameId, IReadOnlyList<DiscWriteInfo> discs, uint psarOffset, int compressionLevel, Action<long, long>? onProgress = null, CancellationToken cancellationToken = default)
+    public static void WritePsar(Stream outputStream, string mainGameTitle, string mainGameId, IReadOnlyList<DiscWriteInfo> discs, uint psarOffset, int compressionLevel, byte[]? config = null, Action<long, long>? onProgress = null, CancellationToken cancellationToken = default)
     {
         var isoPositions = new uint[5];
         byte[] zeroBuffer = new byte[0x8000];
@@ -60,8 +60,6 @@ public static class PsarPackager
                 uint pad = 0x8000 - (offset % 0x8000);
                 outputStream.Write(zeroBuffer, 0, (int)pad);
             }
-
-            byte[]? config = GetPopsConfig(disc.GameId);
 
             isoPositions[discNo] = (uint)(outputStream.Position - psarOffset);
 

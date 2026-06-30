@@ -258,10 +258,12 @@
             </TabControl>
         </Grid>
 
-        <!-- ===== Row 2: POPS 호환성 고급 설정 (전체 폭, 맨 아래쪽) ===== -->
-        <Border Grid.Row="2" Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12,8" IsEnabled="{Binding IsUnlocked}">
+        <Border Grid.Row="2" Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12,8" IsEnabled="{Binding CanEditPopsConfig}">
             <StackPanel>
-                <TextBlock Text="POPS 호환성 고급 설정" Foreground="#D4AF37" FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="POPS 에뮬레이터 설정" Foreground="#D4AF37" FontSize="12" FontWeight="Bold"/>
+                    <TextBlock Text="프리셋 설정 로드됨 (수동 설정 비활성화)"  Foreground="#4CAF50" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" Visibility="{Binding HasPresetConfig, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                </StackPanel>
 
                 <Grid Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
@@ -269,21 +271,21 @@
                         <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <CheckBox Grid.Column="0" Content="FMV 프리징 픽스 (cmd 0x00)" IsChecked="{Binding UseFmvFix}" VerticalAlignment="Center" Foreground="#DDDDDD" FontSize="11" ToolTip="값이 클수록 효과는 강하지만 슬로다운 부작용이 있을 수 있습니다"/>
-                    <ComboBox Grid.Column="2" ItemsSource="{Binding FmvFixPresets}" Text="{Binding FmvFixValue}" IsEnabled="{Binding UseFmvFix}" VerticalAlignment="Center" FontSize="11" ToolTip="값이 클수록 효과는 강하지만 슬로다운 부작용이 있을 수 있습니다">
+                    <CheckBox Grid.Column="0" Content="동영상 프리징 픽스 (cmd 0x00)" IsChecked="{Binding UseFmvFix}" VerticalAlignment="Center" Foreground="#DDDDDD" FontSize="11" />
+                    <ComboBox Grid.Column="2" ItemsSource="{Binding FmvFixPresets}" SelectedItem="{Binding FmvFixValue}" IsEnabled="{Binding UseFmvFix}" VerticalAlignment="Center" FontSize="11">
                         <ComboBox.ItemContainerStyle>
                             <Style TargetType="ComboBoxItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
                                 <Setter Property="VerticalContentAlignment" Value="Center"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Style>
                         </ComboBox.ItemContainerStyle>
                     </ComboBox>
 
-                    <CheckBox Grid.Column="4" Content="CD 타이밍 픽스 (cmd 0x04)" IsChecked="{Binding UseCdTimingFix}" VerticalAlignment="Center" Foreground="#DDDDDD" FontSize="11"/>
-                </Grid>                
+                    <CheckBox Grid.Column="4" Content="추가 옵션 (cmd 0x0B)" IsChecked="{Binding UseCdTimingFix}" VerticalAlignment="Center" Foreground="#DDDDDD" FontSize="11"/>
+                </Grid>
             </StackPanel>
         </Border>
 

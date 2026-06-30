@@ -6,7 +6,7 @@ namespace PBP.Core.Services;
 
 public static class PbpPackager
 {
-    public static Task<string> WritePbpAsync(IReadOnlyList<DiscWriteInfo> discInfos, string gameId, string gameTitle, string outputPath, int compressionLevel, PbpAssets? assets, IProgress<ProgressInfo> progress, CancellationToken ct = default)
+    public static Task<string> WritePbpAsync(IReadOnlyList<DiscWriteInfo> discInfos, string gameId, string gameTitle, string outputPath, int compressionLevel, PbpAssets? assets, byte[]? config = null, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         return Task.Run(() =>
         {
@@ -25,7 +25,7 @@ public static class PbpPackager
 
             var reporter = new ProgressReporter(gameTitle, gameId, totalEstimated: 0, progress);
 
-            PsarPackager.WritePsar(outputStream, gameTitle, gameId, discInfos, psarOffset, compressionLevel, reporter.CreateAction(), ct);
+            PsarPackager.WritePsar(outputStream, gameTitle, gameId, discInfos, psarOffset, compressionLevel, config, reporter.CreateAction(), ct);
             StartDatWriter.WriteStartDat(outputStream, basePbpBytes, assets.BootPng ?? EmbeddedAssetProvider.GetBlankImage());
 
             return outputPath;

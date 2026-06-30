@@ -1,6 +1,5 @@
 ﻿using Common;
 using Common.WPF.ViewModels;
-using Microsoft.VisualBasic.FileIO;
 using NSW.WPF.Services;
 using PBP.Core.Models;
 using PBP.Core.Services;
@@ -28,7 +27,7 @@ public class PackingMainViewModel : ToolTabViewModel
     };
 
     public ObservableCollection<string> FmvFixPresets { get; } = [
-        "0x04", "0x07", "0xFB" ];
+        "0x04: 다수 게임에서 검증됨", "0x07: 실험적" ];
 
     private CancellationTokenSource _cts = new();
     private CancellationTokenSource? _iconCts;
@@ -171,6 +170,10 @@ public class PackingMainViewModel : ToolTabViewModel
 
     public bool ShowBootLogoHint => !HasBootLogo;
 
+    public bool HasPresetConfig => FileItems.FirstOrDefault(i => i.No == 1)?.HasPresetConfig ?? false;
+
+    public bool CanEditPopsConfig => IsUnlocked && !HasPresetConfig;
+
     public ObservableCollection<LogEntry> LogEntries { get; } = [];
 
     public ObservableCollection<DiscFileItem> FileItems { get; } = [];
@@ -269,7 +272,7 @@ public class PackingMainViewModel : ToolTabViewModel
 
         IsValidating = true;
 
-        List<(string Path, string GameId, long Size)> validated;
+        List<(string Path, string GameId, long Size, byte[]? PresetConfig)> validated;
         int failedCount;
 
         try
@@ -289,7 +292,8 @@ public class PackingMainViewModel : ToolTabViewModel
             var item = new DiscFileItem(v.Path)
             {
                 GameId = v.GameId,
-                FileSizeBytes = v.Size
+                FileSizeBytes = v.Size,
+                PresetConfigBytes = v.PresetConfig
             };
 
             FileItems.Add(item);
@@ -303,14 +307,16 @@ public class PackingMainViewModel : ToolTabViewModel
 
         if (validated.Count > 0)
         {
-            OnPropertyChanged(nameof(HintVisibility));
+            OnPropertyChanged(nameof(HintVisibility));            
             ResortAndRenumber();
+            OnPropertyChanged(nameof(HasPresetConfig));
+            OnPropertyChanged(nameof(CanEditPopsConfig));
         }
 
         CommandManager.InvalidateRequerySuggested();
     }
 
-    private async Task<(string Path, string GameId, long Size)?> ValidateCandidateAsync(string path)
+    private async Task<(string Path, string GameId, long Size, byte[]? PresetConfig)?> ValidateCandidateAsync(string path)
     {
         try
         {
@@ -319,20 +325,29 @@ public class PackingMainViewModel : ToolTabViewModel
                 var ext = Path.GetExtension(path).ToLowerInvariant();
                 var size = DiscSizeResolver.GetTotalSize(path);
 
-                if (ext == ".chd")
-                    return (path, GameIdReader.ReadFromDisk(DiskSource.FromChd(path)), size);
+                string gameId;
 
-                if (ext == ".cue")
+                if (ext == ".chd")
+                {
+                    gameId = GameIdReader.ReadFromDisk(DiskSource.FromChd(path));
+                }
+                else if (ext == ".cue")
                 {
                     var binPath = CueFileResolver.GetBinPath(path);
                     using var stream = new FileStream(binPath, FileMode.Open, FileAccess.Read);
 
-                    return (path, GameIdReader.ReadFromStream(stream, stream.Length), size);
+                    gameId = GameIdReader.ReadFromStream(stream, stream.Length);
+                }
+                else
+                {
+                    using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+
+                    gameId = GameIdReader.ReadFromStream(fs, fs.Length);
                 }
 
-                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+                var presetConfig = PsarPackager.GetPopsConfig(gameId);
 
-                return (path, GameIdReader.ReadFromStream(fs, fs.Length), size);
+                return (path, gameId, size, presetConfig);
             });
         }
         catch (Exception ex)
@@ -560,7 +575,7 @@ public class PackingMainViewModel : ToolTabViewModel
                     discInfos.Add(new DiscWriteInfo(resolved.IsoStream, resolved.IsoLength, item.GameId, orderedItems.Count > 1 ? $"{gameTitle} - Disc {item.No}" : gameTitle, resolved.TocData));
                 }
 
-                await PbpPackager.WritePbpAsync(discInfos, mainGameId, gameTitle, targetOutputPath, _config.PS1.CompressLevel, assets, BuildProgressReporter(), _cts.Token);
+                await PbpPackager.WritePbpAsync(discInfos, mainGameId, gameTitle, targetOutputPath, _config.PS1.CompressLevel, assets, FileItems.FirstOrDefault(i => i.No == 1)?.PresetConfigBytes, BuildProgressReporter(), _cts.Token);
 
                 ProgressPct = 100;
                 AppendLog($"작업 완료: {targetOutputPath}", LogLevel.Ok);

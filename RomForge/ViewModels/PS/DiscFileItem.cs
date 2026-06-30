@@ -30,6 +30,9 @@ public class DiscFileItem(string filePath) : ProcessableItemBase
         ? $"{FileSizeBytes / (1024.0 * 1024 * 1024):F2} GB"
         : $"{FileSizeBytes / (1024.0 * 1024):F1} MB";
 
+    public byte[]? PresetConfigBytes { get; set; }
+    public bool HasPresetConfig => PresetConfigBytes != null;
+
     public Brush ExtensionBackground => ExtensionColorMap.Resolve(Extension, ColorMap);
 
     private static readonly Dictionary<string, string> ColorMap = new()
