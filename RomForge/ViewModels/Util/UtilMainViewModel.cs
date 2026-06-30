@@ -8,6 +8,8 @@ public class UtilMainViewModel : MultiToolTabViewModel
 
     public ZipImageToolMainViewModel ZipImageToolVM { get; }
 
+    public CertsMainViewModel CertsVM { get; }
+
     public CueMainViewModel CueVM { get; }
 
     public HashMainViewModel HashVM { get; }
@@ -33,10 +35,12 @@ public class UtilMainViewModel : MultiToolTabViewModel
         IsAdmin = CheckAdmin();
 
         ZipImageToolVM = new ZipImageToolMainViewModel();
+        CertsVM = new CertsMainViewModel();
         CueVM = new CueMainViewModel();
         HashVM = new HashMainViewModel();
 
         Tools.Add(ZipImageToolVM);
+        Tools.Add(CertsVM);
         Tools.Add(CueVM);
         Tools.Add(HashVM);
 

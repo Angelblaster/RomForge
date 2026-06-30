@@ -10,10 +10,8 @@ using LibHac.Tools.FsSystem;
 using LibHac.Tools.FsSystem.NcaUtils;
 using NSW.Core;
 using NSW.Utils;
-using RomForge.Core.Models.Switch;
 using RomZip.Core.Services;
 using System.IO;
-
 using Path = System.IO.Path;
 using Res = NSW.Core.Properties.Resources;
 
@@ -24,60 +22,54 @@ public class NspXciConvertService : BaseSwitchService
     public static Task<string> NspToXciAsync(string inputPath, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
     {
         var keySet = KeySetProvider.Instance.KeySet ?? throw new InvalidOperationException(Res.Main_Err_NoKeys);
-
         return RunAsync(inputPath, ContainerFormat.Xci, false, false, false, 0, keySet.Clone(), progress, log, ct);
     }
 
     public static Task<string> XciToNspAsync(string inputPath, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
     {
         var keySet = KeySetProvider.Instance.KeySet ?? throw new InvalidOperationException(Res.Main_Err_NoKeys);
-
         return RunAsync(inputPath, ContainerFormat.Nsp, false, false, false, 0, keySet.Clone(), progress, log, ct);
     }
 
-    public static Task<string> NspToXczAsync(string inputPath, int compressionLevel, bool validation, bool useBlockMode, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
+    public static Task<string> NspToXczAsync(string inputPath, int compressionLevel, bool useBlockMode, bool validation, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
     {
         var keySet = KeySetProvider.Instance.KeySet ?? throw new InvalidOperationException(Res.Main_Err_NoKeys);
-
-        return RunAsync(inputPath, ContainerFormat.Xci, true, validation, useBlockMode, compressionLevel, keySet.Clone(), progress, log, ct);
+        return RunAsync(inputPath, ContainerFormat.Xci, true, useBlockMode, validation, compressionLevel, keySet.Clone(), progress, log, ct);
     }
 
-    public static Task<string> XciToNszAsync(string inputPath, int compressionLevel, bool validation, bool useBlockMode, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
+    public static Task<string> XciToNszAsync(string inputPath, int compressionLevel, bool useBlockMode, bool validation, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
     {
         var keySet = KeySetProvider.Instance.KeySet ?? throw new InvalidOperationException(Res.Main_Err_NoKeys);
-
-        return RunAsync(inputPath, ContainerFormat.Nsp, true, validation, useBlockMode, compressionLevel, keySet.Clone(), progress, log, ct);
+        return RunAsync(inputPath, ContainerFormat.Nsp, true, useBlockMode, validation, compressionLevel, keySet.Clone(), progress, log, ct);
     }
 
     public static Task<string> NszToXciAsync(string inputPath, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
     {
         var keySet = KeySetProvider.Instance.KeySet ?? throw new InvalidOperationException(Res.Main_Err_NoKeys);
-
         return RunAsync(inputPath, ContainerFormat.Xci, false, false, false, 0, keySet.Clone(), progress, log, ct);
     }
 
     public static Task<string> XczToNspAsync(string inputPath, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
     {
         var keySet = KeySetProvider.Instance.KeySet ?? throw new InvalidOperationException(Res.Main_Err_NoKeys);
-
         return RunAsync(inputPath, ContainerFormat.Nsp, false, false, false, 0, keySet.Clone(), progress, log, ct);
     }
 
-    public static Task<string> NszToXczAsync(string inputPath, int compressionLevel, bool validation, bool useBlockMode, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
+    public static Task<string> NszToXczAsync(string inputPath, int compressionLevel, bool useBlockMode, bool validation, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
     {
         var keySet = KeySetProvider.Instance.KeySet ?? throw new InvalidOperationException(Res.Main_Err_NoKeys);
-
-        return RunAsync(inputPath, ContainerFormat.Xci, true, validation, useBlockMode, compressionLevel, keySet.Clone(), progress, log, ct);
+        return RunAsync(inputPath, ContainerFormat.Xci, true, useBlockMode, validation, compressionLevel, keySet.Clone(), progress, log, ct);
     }
 
-    public static Task<string> XczToNszAsync(string inputPath, int compressionLevel, bool validation, bool useBlockMode, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
+    public static Task<string> XczToNszAsync(string inputPath, int compressionLevel, bool useBlockMode, bool validation, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct = default)
     {
         var keySet = KeySetProvider.Instance.KeySet ?? throw new InvalidOperationException(Res.Main_Err_NoKeys);
-
-        return RunAsync(inputPath, ContainerFormat.Nsp, true, validation, useBlockMode, compressionLevel, keySet.Clone(), progress, log, ct);
+        return RunAsync(inputPath, ContainerFormat.Nsp, true, useBlockMode, validation, compressionLevel, keySet.Clone(), progress, log, ct);
     }
 
-    private static async Task<string> RunAsync(string inputPath, ContainerFormat outputFormat, bool useCompression, bool validation, bool useBlockMode, int compressionLevel, KeySet keySet, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct)
+    private enum ContainerFormat { Nsp, Xci }
+
+    private static async Task<string> RunAsync(string inputPath, ContainerFormat outputFormat, bool useCompression, bool useBlockMode, bool validation, int compressionLevel, KeySet keySet, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct)
     {
         var disposables = new List<IDisposable>();
         var converters = new Dictionary<string, NcaToNczConverter>(StringComparer.OrdinalIgnoreCase);
@@ -85,7 +77,10 @@ public class NspXciConvertService : BaseSwitchService
         bool isCompleted = false;
         string inputExt = Path.GetExtension(inputPath).ToLowerInvariant();
         bool inputIsXci = inputExt is ".xci" or ".xcz";
-        string outputExt = outputFormat == ContainerFormat.Xci ? (useCompression ? ".xcz" : ".xci") : (useCompression ? ".nsz" : ".nsp");
+
+        string outputExt = outputFormat == ContainerFormat.Xci
+            ? (useCompression ? ".xcz" : ".xci")
+            : (useCompression ? ".nsz" : ".nsp");
 
         log?.Invoke($"{Path.GetFileName(inputPath)} → {outputExt.TrimStart('.').ToUpper()} 변환 시작", LogLevel.Info, inputPath);
 
@@ -133,13 +128,10 @@ public class NspXciConvertService : BaseSwitchService
                     continue;
 
                 fileRef.Get.GetSize(out long size).ThrowIfFailure();
-
                 IFile rawFile = fileRef.Release();
-
                 disposables.Add(rawFile);
 
                 IStorage currentStorage = new FileStorage(rawFile);
-
                 disposables.Add(currentStorage);
 
                 if (entryExt is ".tik" or ".cert")
@@ -171,12 +163,46 @@ public class NspXciConvertService : BaseSwitchService
             if (outputFormat == ContainerFormat.Xci)
             {
                 byte[] xciPrefix = GetXciPrefix(inputIsXci ? [inputPath] : []);
-                var rootEntries = inputIsXci ? GetRootEntriesFromXci(keySet, sourceStorage) : GetDummyRootEntries();
+                var rootEntries = inputIsXci
+                    ? GetRootEntriesFromXci(keySet, sourceStorage)
+                    : GetDummyRootEntries();
 
                 await WriteXciAsync(displayName, meta.TitleId, xciPrefix, rootEntries, inputIsXci ? sourceStorage.AsStream() : null, fileEntries, fout, progress, ct);
 
                 if (useCompression && validation && converters.Count > 0)
-                    await RunValidation(fout, converters, fileEntries.Sum(f => f.EstimatedSize), meta.TitleId, displayName, progress, log, ct);
+                {
+                    fout.Position = 0;
+
+                    var validationStorage = new StreamStorage(fout, false);
+                    var validationXci = new Xci(keySet, validationStorage);
+                    var validationSecure = validationXci.OpenPartition(XciPartitionType.Secure);
+                    var nczEntries = validationSecure.EnumerateEntries("/", "*.ncz")
+                        .Where(e => converters.ContainsKey(Path.ChangeExtension(e.Name, ".nca")))
+                        .ToList();
+                    long totalValidationSize = nczEntries.Sum(e => e.Size);
+
+                    foreach (var entry in nczEntries)
+                    {
+                        ct.ThrowIfCancellationRequested();
+
+                        string origName = Path.ChangeExtension(entry.Name, ".nca");
+
+                        if (!converters.TryGetValue(origName, out var converter)) 
+                            continue;
+
+                        using var nczFile = new UniqueRef<IFile>();
+
+                        validationSecure.OpenFile(ref nczFile.Ref, entry.FullPath.ToU8Span(), OpenMode.Read).ThrowIfFailure();
+
+                        string label = $"{meta.KrTitle ?? meta.EnTitle} [{entry.Name}]";
+
+                        log?.Invoke($"- {label} {Res.ToolTip_ValidateCompress}", LogLevel.Info, meta.TitleId);
+
+                        await converter.ValidateAsync(nczFile.Get.AsStream(), meta.TitleId, totalValidationSize, label, progress, ct);
+
+                        log?.Invoke($"- {label} OK", LogLevel.Ok, meta.TitleId);
+                    }
+                }
             }
             else
             {
@@ -195,11 +221,8 @@ public class NspXciConvertService : BaseSwitchService
         }
         finally
         {
-            for (int i = disposables.Count - 1; i >= 0; i--)
-                disposables[i]?.Dispose();
-
-            if (!isCompleted) 
-                CleanupOnFailure(finalPath, log, string.Empty);
+            for (int i = disposables.Count - 1; i >= 0; i--) disposables[i]?.Dispose();
+            if (!isCompleted) CleanupOnFailure(finalPath, log, string.Empty);
         }
     }
 
