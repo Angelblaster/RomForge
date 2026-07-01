@@ -4,61 +4,75 @@ public static class GdRomWriter
 {
     public static void WriteDataTrack(string outputPath, uint trackStartLba, IReadOnlyCollection<(uint Lba, byte[] Sector2048)> sectors, Action<double>? onProgress = null, CancellationToken ct = default)
     {
-        if (sectors.Count == 0) return;
+        if (sectors.Count == 0) 
+            return;
 
         var sortedSectors = sectors.OrderBy(s => s.Lba).ToList();
-
-        using var fs = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024);
-
-        uint expectedLba = trackStartLba;
-        int totalSectors = sortedSectors.Count;
-        int current = 0;
-
+        using var fs = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None, 256 * 1024);
+        uint maxLba = sortedSectors[^1].Lba;
+        int totalRequiredSectors = (int)(maxLba - trackStartLba + 1);
+        var fullSectorArray = new (uint Lba, byte[] UserData)[totalRequiredSectors];
         var emptyUserData = new byte[2048];
+        int sortedIdx = 0;
 
-        int sectorSize = 2352;
-        int sectorsPerBuffer = 1800;
-        byte[] writeBuffer = new byte[sectorSize * sectorsPerBuffer];
-        int bufferCount = 0;
-
-        void FlushBuffer()
+        for (int i = 0; i < totalRequiredSectors; i++)
         {
-            if (bufferCount > 0)
+            uint currentLba = trackStartLba + (uint)i;
+
+            if (sortedIdx < sortedSectors.Count && sortedSectors[sortedIdx].Lba == currentLba)
             {
-                fs.Write(writeBuffer, 0, bufferCount * sectorSize);
-                bufferCount = 0;
+                fullSectorArray[i] = sortedSectors[sortedIdx];
+                sortedIdx++;
             }
+            else
+                fullSectorArray[i] = (currentLba, emptyUserData);
         }
 
-        foreach (var (lba, userData) in sortedSectors)
+        byte[][] rawSectors = new byte[totalRequiredSectors][];
+        int completedCount = 0;
+        int totalSectors = sortedSectors.Count;
+
+        Parallel.For(0, totalRequiredSectors, new ParallelOptions { CancellationToken = ct }, i =>
+        {
+            var (Lba, UserData) = fullSectorArray[i];
+
+            rawSectors[i] = BuildRawSector(Lba, UserData);
+
+            if (UserData != emptyUserData)
+            {
+                int current = Interlocked.Increment(ref completedCount);
+
+                if (totalSectors > 0 && current % 500 == 0)
+                    onProgress?.Invoke((double)current / totalSectors);
+            }
+        });
+
+        onProgress?.Invoke(1.0);
+
+        int sectorSize = 2352;
+        int writeBufferSize = 2000;
+        byte[] writeBuffer = new byte[sectorSize * writeBufferSize];
+        int bufferedCount = 0;
+
+        for (int i = 0; i < totalRequiredSectors; i++)
         {
             ct.ThrowIfCancellationRequested();
 
-            while (expectedLba < lba)
+            Buffer.BlockCopy(rawSectors[i], 0, writeBuffer, bufferedCount * sectorSize, sectorSize);
+
+            bufferedCount++;
+
+            if (bufferedCount >= writeBufferSize)
             {
-                var emptyRaw = BuildRawSector(expectedLba, emptyUserData);
-                Buffer.BlockCopy(emptyRaw, 0, writeBuffer, bufferCount * sectorSize, sectorSize);
-                bufferCount++;
-                expectedLba++;
-
-                if (bufferCount >= sectorsPerBuffer)
-                    FlushBuffer();
+                fs.Write(writeBuffer, 0, bufferedCount * sectorSize);
+                bufferedCount = 0;
             }
-
-            var raw = BuildRawSector(lba, userData);
-            Buffer.BlockCopy(raw, 0, writeBuffer, bufferCount * sectorSize, sectorSize);
-            bufferCount++;
-            expectedLba++;
-
-            if (bufferCount >= sectorsPerBuffer)
-                FlushBuffer();
-
-            current++;
-            if (totalSectors > 0)
-                onProgress?.Invoke((double)current / totalSectors);
         }
 
-        FlushBuffer();
+        if (bufferedCount > 0)
+        {
+            fs.Write(writeBuffer, 0, bufferedCount * sectorSize);
+        }
     }
 
     public static byte[] BuildRawSector(uint absoluteLba, byte[] userData2048)
