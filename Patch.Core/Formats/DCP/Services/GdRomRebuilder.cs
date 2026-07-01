@@ -25,6 +25,7 @@ public static class GdRomRebuilder
         var builder = new Iso9660Builder(pvdRaw, root);
 
         var allFiles = Iso9660DirectoryReader.Flatten(root).ToList();
+        var fileDataCache = new Dictionary<Iso9660Entry, byte[]>();
         int fileDone = 0;
 
         foreach (var entry in allFiles)
@@ -32,11 +33,11 @@ public static class GdRomRebuilder
             ct.ThrowIfCancellationRequested();
 
             var data = replacedFiles.TryGetValue(entry.FullPath, out var patched) ? patched : Iso9660DirectoryReader.ReadFile(sourceFunc, entry);
-
             builder.SetFileData(entry, data);
+            fileDataCache[entry] = data;
 
             fileDone++;
-            onProgress?.Invoke(0.30 * fileDone / allFiles.Count);
+            onProgress?.Invoke(0.10 * fileDone / allFiles.Count);
         }
 
         var (_, _, totalSectors) = builder.Relayout((uint)firstDataTrack.StartLba + 17);
@@ -51,13 +52,12 @@ public static class GdRomRebuilder
 
             foreach (var child in dir.Children.Where(c => !c.IsDirectory))
             {
-                var data = replacedFiles.TryGetValue(child.FullPath, out var patched) ? patched : Iso9660DirectoryReader.ReadFile(sourceFunc, child);
-
+                var data = fileDataCache[child];
                 contentSectors.Add((child.LayoutLba, PadToSector(data)));
             }
 
             dirDone++;
-            onProgress?.Invoke(0.30 + 0.20 * dirDone / dirTotal);
+            onProgress?.Invoke(0.10 + 0.10 * dirDone / dirTotal);
 
             foreach (var child in dir.Children.Where(c => c.IsDirectory))
                 CollectDirRecords(child);
@@ -66,7 +66,6 @@ public static class GdRomRebuilder
         CollectDirRecords(root);
 
         var newPvd = builder.BuildPvd(totalSectors);
-
         contentSectors.Add(((uint)firstDataTrack.StartLba + 16, PadToSector(newPvd)));
 
         var expanded = new List<(uint Lba, byte[] Sector2048)>();
@@ -77,32 +76,38 @@ public static class GdRomRebuilder
         foreach (var (lba, data) in contentSectors)
         {
             int sectorCount = (int)Math.Ceiling(data.Length / 2048.0);
-
             for (int s = 0; s < sectorCount; s++)
             {
                 var chunk = new byte[2048];
                 int copyLen = Math.Min(2048, data.Length - s * 2048);
-
                 Buffer.BlockCopy(data, s * 2048, chunk, 0, copyLen);
                 expanded.Add(((uint)(lba + s), chunk));
             }
         }
 
-        onProgress?.Invoke(0.60);
+        onProgress?.Invoke(0.20);
 
         var dedup = expanded.GroupBy(e => e.Lba).Select(g => g.Last()).OrderBy(e => e.Lba).ToList();
         var newDataTrackPath = Path.Combine(outputDir, firstDataTrack.FileName);
 
-        GdRomWriter.WriteDataTrack(newDataTrackPath, (uint)firstDataTrack.StartLba, dedup);
-
-        onProgress?.Invoke(0.90);
-
-        foreach (var track in originalGdi.Tracks.Where(t => t != firstDataTrack))
+        GdRomWriter.WriteDataTrack(newDataTrackPath, (uint)firstDataTrack.StartLba, dedup, p =>
         {
+            onProgress?.Invoke(0.20 + (p * 0.60));
+        }, ct);
+
+        onProgress?.Invoke(0.80);
+
+        var otherTracks = originalGdi.Tracks.Where(t => t != firstDataTrack).ToList();
+        for (int i = 0; i < otherTracks.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var track = otherTracks[i];
             var srcPath = originalGdi.GetTrackFullPath(track);
             var dstPath = Path.Combine(outputDir, track.FileName);
 
             File.Copy(srcPath, dstPath, overwrite: true);
+
+            onProgress?.Invoke(0.80 + 0.18 * (i + 1) / otherTracks.Count);
         }
 
         WriteGdi(originalGdi, Path.Combine(outputDir, Path.GetFileName(originalGdi.GdiPath)));

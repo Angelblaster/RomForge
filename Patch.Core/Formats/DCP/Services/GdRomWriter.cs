@@ -1,20 +1,64 @@
 ﻿namespace Patch.Core.Formats.DCP.Services;
 
-
 public static class GdRomWriter
 {
-    public static void WriteDataTrack(string outputPath, uint trackStartLba, IEnumerable<(uint Lba, byte[] Sector2048)> sectors)
+    public static void WriteDataTrack(string outputPath, uint trackStartLba, IReadOnlyCollection<(uint Lba, byte[] Sector2048)> sectors, Action<double>? onProgress = null, CancellationToken ct = default)
     {
-        using var fs = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+        if (sectors.Count == 0) return;
 
-        foreach (var (lba, userData) in sectors)
+        var sortedSectors = sectors.OrderBy(s => s.Lba).ToList();
+
+        using var fs = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None, 128 * 1024);
+
+        uint expectedLba = trackStartLba;
+        int totalSectors = sortedSectors.Count;
+        int current = 0;
+
+        var emptyUserData = new byte[2048];
+
+        int sectorSize = 2352;
+        int sectorsPerBuffer = 1800;
+        byte[] writeBuffer = new byte[sectorSize * sectorsPerBuffer];
+        int bufferCount = 0;
+
+        void FlushBuffer()
         {
-            var raw = BuildRawSector(lba, userData);
-            long byteOffset = (long)(lba - trackStartLba) * 2352;
-
-            fs.Seek(byteOffset, SeekOrigin.Begin);
-            fs.Write(raw, 0, raw.Length);
+            if (bufferCount > 0)
+            {
+                fs.Write(writeBuffer, 0, bufferCount * sectorSize);
+                bufferCount = 0;
+            }
         }
+
+        foreach (var (lba, userData) in sortedSectors)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            while (expectedLba < lba)
+            {
+                var emptyRaw = BuildRawSector(expectedLba, emptyUserData);
+                Buffer.BlockCopy(emptyRaw, 0, writeBuffer, bufferCount * sectorSize, sectorSize);
+                bufferCount++;
+                expectedLba++;
+
+                if (bufferCount >= sectorsPerBuffer)
+                    FlushBuffer();
+            }
+
+            var raw = BuildRawSector(lba, userData);
+            Buffer.BlockCopy(raw, 0, writeBuffer, bufferCount * sectorSize, sectorSize);
+            bufferCount++;
+            expectedLba++;
+
+            if (bufferCount >= sectorsPerBuffer)
+                FlushBuffer();
+
+            current++;
+            if (totalSectors > 0)
+                onProgress?.Invoke((double)current / totalSectors);
+        }
+
+        FlushBuffer();
     }
 
     public static byte[] BuildRawSector(uint absoluteLba, byte[] userData2048)
@@ -26,7 +70,7 @@ public static class GdRomWriter
 
         sector[0] = 0x00;
 
-        for (int i = 1; i <= 10; i++) 
+        for (int i = 1; i <= 10; i++)
             sector[i] = 0xFF;
 
         sector[11] = 0x00;
@@ -46,7 +90,6 @@ public static class GdRomWriter
         sector[2065] = (byte)((edc >> 8) & 0xFF);
         sector[2066] = (byte)((edc >> 16) & 0xFF);
         sector[2067] = (byte)((edc >> 24) & 0xFF);
-
 
         return sector;
     }
