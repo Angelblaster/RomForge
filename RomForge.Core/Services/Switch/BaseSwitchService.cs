@@ -11,7 +11,6 @@ using LibHac.Tools.FsSystem.NcaUtils;
 using NSW.Core;
 using NSW.Core.Models;
 using RomForge.Core.Models.Switch;
-using RomZip.Core.Services;
 using System.Buffers.Binary;
 using System.IO;
 using System.Security.Cryptography;

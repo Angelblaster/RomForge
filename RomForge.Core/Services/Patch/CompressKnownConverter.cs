@@ -1,8 +1,7 @@
 ﻿using CHD.Core.Services;
 using Common;
 using DolphinTool.Core.Services;
-using RomZip.Core.Enums;
-using RomZip.Core.Models;
+using RomForge.Core.Models.Compression;
 using System.IO;
 
 namespace RomForge.Core.Services.Patch;

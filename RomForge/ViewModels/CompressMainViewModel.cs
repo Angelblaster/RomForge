@@ -5,12 +5,13 @@ using Common.WPF.ViewModels;
 using DolphinTool.Core.Services;
 using RomForge.Core.UI.Command;
 using RomForge.Core.Models;
-using RomZip.Core.Enums;
-using RomZip.Core.Services;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using RomForge.Core.Services.Compression;
+using RomForge.Core.Models.Compression;
+using RomForge.Core.Services.Switch;
 
 namespace RomForge.ViewModels;
 

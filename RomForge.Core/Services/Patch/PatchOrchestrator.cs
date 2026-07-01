@@ -1,7 +1,6 @@
 ﻿using Common;
 using Patch.Core;
-using RomZip.Core.Enums;
-using RomZip.Core.Models;
+using RomForge.Core.Models.Compression;
 using System.IO;
 
 namespace RomForge.Core.Services.Patch;

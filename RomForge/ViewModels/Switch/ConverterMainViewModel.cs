@@ -6,7 +6,6 @@ using RomForge.Core.UI.Command;
 using RomForge.Core.Models;
 using RomForge.Core.Models.Switch;
 using RomForge.Core.Services.Switch;
-using RomZip.Core.Services;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;

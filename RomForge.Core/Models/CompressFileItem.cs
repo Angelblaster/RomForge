@@ -1,6 +1,6 @@
 using Common.WPF.ViewModels;
-using RomZip.Core.Enums;
-using RomZip.Core.Services;
+using RomForge.Core.Models.Compression;
+using RomForge.Core.Services.Compression;
 using System.IO;
 using System.Windows.Media;
 
