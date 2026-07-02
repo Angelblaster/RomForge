@@ -1,4 +1,5 @@
 ﻿using _3DS.Core.Crypto;
+using _3DS.Core.Enums;
 using _3DS.Core.FileSystem;
 using _3DS.Core.Models;
 using _3DS.Core.Services;
@@ -7,6 +8,7 @@ using Common.WPF.ViewModels;
 using NSW.WPF.UI;
 using RomForge.Core.Models;
 using RomForge.Core.Models._3DS;
+using RomForge.Core.Services._3DS;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
@@ -332,6 +334,17 @@ public class InstallerMainViewModel : ToolTabViewModel
                 StatusMessage = $"설치 완료: {selected.ShortDescription}";
                 AppendLog($"설치 완료: {selected.ShortDescription}", LogLevel.Ok);
                 AppendLog($"3DS에서 [홈브루 런처]를 이용해, 3ds 폴더 내부의 'custom-install-finalize'를 실행해야 게임 아이콘이 생성됩니다.", LogLevel.Highlight);
+
+                if (selected.ForcedLanguage != Locale3dsLanguage.None)
+                {
+                    if (selected.LocaleRegionCode == LocaleRegion.None)
+                        AppendLog("제품 코드에서 지역을 판별할 수 없어 로케일 고정을 건너뜁니다.", LogLevel.Error);
+                    else
+                    {
+                        await LocaleTxtWriter.WriteAsync(_scanner!.SdRoot, selected.TitleId, selected.LocaleRegionCode, selected.ForcedLanguage, ct);
+                        AppendLog($"로케일 고정 완료: {selected.LocaleRegionCode} {selected.ForcedLanguage} (locale.txt)", LogLevel.Ok);
+                    }
+                }
             }
             catch (OperationCanceledException)
             {

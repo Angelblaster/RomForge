@@ -14,6 +14,8 @@ public class TitleViewModel : ViewModelBase
     private string _publisher = string.Empty;    
     private string _productCode = string.Empty;
     private string _region = string.Empty;
+    private LocaleRegion _localeRegionCode = LocaleRegion.None;
+    private Locale3dsLanguage _forcedLanguage = Locale3dsLanguage.None;
     private bool _crypto = false;
     private double _progress;
 
@@ -55,6 +57,7 @@ public class TitleViewModel : ViewModelBase
             _productCode = value;
             OnPropertyChanged();
             Region = GetRegionFromProductCode(value);
+            LocaleRegionCode = GetLocaleRegionFromProductCode(value);
         }
     }
 
@@ -62,6 +65,18 @@ public class TitleViewModel : ViewModelBase
     {
         get => _region;
         set { _region = value; OnPropertyChanged(); }
+    }
+
+    public LocaleRegion LocaleRegionCode
+    {
+        get => _localeRegionCode;
+        private set { _localeRegionCode = value; OnPropertyChanged(); }
+    }
+
+    public Locale3dsLanguage ForcedLanguage
+    {
+        get => _forcedLanguage;
+        set { _forcedLanguage = value; OnPropertyChanged(); }
     }
 
     public bool Crypto
@@ -129,6 +144,26 @@ public class TitleViewModel : ViewModelBase
             'X' => "세계",
             'Z' => "세계",
             _ => "알 수 없음"
+        };
+    }
+
+    private static LocaleRegion GetLocaleRegionFromProductCode(string productCode)
+    {
+        if (string.IsNullOrEmpty(productCode) || productCode.Length < 7)
+            return LocaleRegion.None;
+
+        char region = productCode[productCode.IndexOf('-', 4) + 4];
+
+        return region switch
+        {
+            'J' => LocaleRegion.JPN,
+            'E' or 'U' or 'N' => LocaleRegion.USA,
+            'P' or 'G' or 'F' or 'S' or 'I' or 'H' or 'R' => LocaleRegion.EUR,
+            'K' => LocaleRegion.KOR,
+            'A' => LocaleRegion.AUS,
+            'C' => LocaleRegion.CHN,
+            'T' => LocaleRegion.TWN,
+            _ => LocaleRegion.None,
         };
     }
 }
