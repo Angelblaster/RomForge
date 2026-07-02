@@ -10,7 +10,14 @@ public class ProgressReporter(string gameTitle, string gameId, long totalEstimat
     private readonly double _windowSec = 2.0;
     private long _totalWritten;
 
-    public Action<long, long> CreateAction() => (cur, total) => Report(cur, total, false);
+    public Action<long, long> CreateAction()
+    {
+        return (cur, total) =>
+        {
+            bool force = cur >= total;
+            Report(cur, total, force);
+        };
+    }
 
     public void AddProgress(long bytesRead)
     {

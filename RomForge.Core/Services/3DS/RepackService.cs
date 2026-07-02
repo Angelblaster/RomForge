@@ -15,6 +15,26 @@ public class RepackService(Action<string, LogLevel> log, Func<string?> getPatchP
 
         await using var source = await OpenSourceAsync(inputPath, keyStore, ct);
 
+        long totalBytes = 0;
+
+        foreach (var content in source.Contents)
+        {
+            var (ncchStream, _) = await source.OpenContentDecrypted(content.ContentIndex);
+
+            await using (ncchStream)
+            {
+                byte[] hdrBuf = new byte[NcchHeader.Size];
+
+                await ncchStream.ReadExactlyAsync(hdrBuf, ct);
+
+                var ncchHeader = NcchHeader.Parse(hdrBuf);
+
+                totalBytes += ((long)ncchHeader.ExefsSize * 0x200) + ((long)ncchHeader.RomfsSize * 0x200);
+            }
+        }
+
+        long accumulatedBytes = 0;
+
         foreach (var content in source.Contents)
         {
             int idx = content.ContentIndex;
@@ -32,11 +52,33 @@ public class RepackService(Action<string, LogLevel> log, Func<string?> getPatchP
 
                 var unpack = await NcchUnpacker.UnpackAsync(ncchStream, ncchHeader, ct);
                 string partDir = Path.Combine(unpackedPath, $"partition{idx}");
+                long lastPartitionCurrent = 0;
 
-                await NcchUnpacker.SaveToDirectoryAsync(ncchStream, unpack, partDir, content, reporter, ct);
+                Action<long, long>? partitionReporter = null;
+
+                if (reporter != null && totalBytes > 0)
+                {
+                    partitionReporter = (current, total) =>
+                    {
+                        long delta = current - lastPartitionCurrent;
+
+                        if (delta > 0)
+                        {
+                            accumulatedBytes += delta;
+                            lastPartitionCurrent = current;
+                            reporter(accumulatedBytes, totalBytes);
+                        }
+                    };
+                }
+
+                await NcchUnpacker.SaveToDirectoryAsync(ncchStream, unpack, partDir, content, partitionReporter, ct);
+
                 log($"파티션 {idx} 언팩 완료", LogLevel.Info);
             }
         }
+
+        if (reporter != null && totalBytes > 0)
+            reporter(totalBytes, totalBytes);
     }
 
     public async Task RepackAsync(string unpackedPath, string outputPath, string? gameName, Action<long, long>? reporter = null, CancellationToken ct = default)

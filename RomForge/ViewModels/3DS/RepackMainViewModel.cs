@@ -3,10 +3,11 @@ using Common;
 using Common.WPF.ViewModels;
 using NSW.Core.Enums;
 using NSW.WPF.Services;
-using RomForge.Core.UI.Command;
+using NSW.WPF.UI;
 using RomForge.Core.Models;
 using RomForge.Core.Models._3DS;
 using RomForge.Core.Services._3DS;
+using RomForge.Core.UI.Command;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
@@ -175,6 +176,15 @@ public class RepackMainViewModel : ToolTabViewModel
     {
         var keyStore = new KeyStore();
         string unpackedPath = Path.Combine(OutputPath, "unpacked");
+
+        if (mode != BuildMode.RebuildOnly && Directory.Exists(unpackedPath))
+        {
+            if (!MessageBoxHelper.ShowQuestion("기존 언팩 데이터를 삭제하고 새로 진행할까요?"))
+                return;
+            else
+                Directory.Delete(unpackedPath, true);
+        }
+
         string outputCci = Utils.GetUniqueFilePath(Path.Combine(OutputPath, Path.GetFileNameWithoutExtension(InputPath) + "_Repack.cci"));
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var progress = BuildProgressReporter();
@@ -184,8 +194,7 @@ public class RepackMainViewModel : ToolTabViewModel
 
         try
         {
-            if (!Directory.Exists(OutputPath))
-                Directory.CreateDirectory(OutputPath);
+            Directory.CreateDirectory(OutputPath);
 
             switch (mode)
             {

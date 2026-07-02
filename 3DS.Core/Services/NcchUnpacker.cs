@@ -96,11 +96,14 @@ public static class NcchUnpacker
         if (contents != null)
         {
             byte[] contentRaw = new byte[8];
+
             using var ms = new MemoryStream(contentRaw);
             using var bw = new BinaryWriter(ms);
+
             bw.Write(contents.ContentId);
             bw.Write(contents.ContentIndex);
             bw.Write(contents.ContentType);
+
             await File.WriteAllBytesAsync(Path.Combine(outputDir, "content.bin"), contentRaw, ct);
         }
 
@@ -113,10 +116,59 @@ public static class NcchUnpacker
         if (result.PlainRegion != null)
             await File.WriteAllBytesAsync(Path.Combine(outputDir, "plain.bin"), result.PlainRegion, ct);
 
+        long totalExeFsBytes = (long)result.Header.ExefsSize * MediaUnit;
+        long totalRomFsBytes = (long)result.Header.RomfsSize * MediaUnit;
+        long totalPartitionBytes = totalExeFsBytes + totalRomFsBytes;
+        long accumulatedBytes = 0;
+        Action<long, long>? exeFsReporter = null;
+
+        if (reporter != null && totalPartitionBytes > 0)
+        {
+            long lastExeFsCurrent = 0;
+
+            exeFsReporter = (current, total) =>
+            {
+                long delta = current - lastExeFsCurrent;
+
+                if (delta > 0)
+                {
+                    accumulatedBytes += delta;
+                    lastExeFsCurrent = current;
+                    reporter(accumulatedBytes, totalPartitionBytes);
+                }
+            };
+        }
+
         if (result.ExeFs != null)
-            await ExeFsUnpacker.SaveToDirectoryAsync(result.ExeFs, Path.Combine(outputDir, "exefs"), reporter, ct);
+        {
+            await ExeFsUnpacker.SaveToDirectoryAsync(result.ExeFs, Path.Combine(outputDir, "exefs"), exeFsReporter, ct);
+
+            accumulatedBytes = totalExeFsBytes;
+        }
+
+        Action<long, long>? romFsReporter = null;
+
+        if (reporter != null && totalPartitionBytes > 0)
+        {
+            long lastRomFsCurrent = 0;
+
+            romFsReporter = (current, total) =>
+            {
+                long delta = current - lastRomFsCurrent;
+
+                if (delta > 0)
+                {
+                    accumulatedBytes += delta;
+                    lastRomFsCurrent = current;
+                    reporter(accumulatedBytes, totalPartitionBytes);
+                }
+            };
+        }
 
         if (result.RomFs != null)
-            await RomFsUnpacker.SaveToDirectoryAsync(ncchStream, result.RomFs, Path.Combine(outputDir, "romfs"), reporter, ct);
+            await RomFsUnpacker.SaveToDirectoryAsync(ncchStream, result.RomFs, Path.Combine(outputDir, "romfs"), romFsReporter, ct);
+
+        if (reporter != null && totalPartitionBytes > 0)
+            reporter(totalPartitionBytes, totalPartitionBytes);
     }
 }
