@@ -31,7 +31,6 @@ public class PackingMainViewModel : ToolTabViewModel
     private readonly CoverArtUpdater _coverArtUpdater = new();
 
     private CancellationTokenSource _cts = new();
-    private readonly AppConfig _config;
 
     private string? _lastIconGameId;
     private string _gameTitle = string.Empty;
@@ -188,9 +187,8 @@ public class PackingMainViewModel : ToolTabViewModel
 
     public event EventHandler RunNavigateSettings;
 
-    public PackingMainViewModel(AppConfig config)
+    public PackingMainViewModel()
     {
-        _config = config;
         RunCommand = new RelayCommand(async _ => await RunAsync(), _ => CanRun);
         CancelCommand = new RelayCommand(_ => _cts.Cancel(), _ => IsLocked);
         SettingsCommand = new RelayCommand(async _ => RunNavigateSettings?.Invoke(this, EventArgs.Empty), _ => !IsLocked);
@@ -405,7 +403,7 @@ public class PackingMainViewModel : ToolTabViewModel
                 DataPsp = EmbeddedAssetProvider.GetDefaultData()
             };
 
-            var plan = PackingJobRunner.PlanOutput(orderedItems[0].FilePath, gameTitle, mainGameId, _config);
+            var plan = PackingJobRunner.PlanOutput(orderedItems[0].FilePath, gameTitle, mainGameId);
 
             byte[]? popsConfig = orderedItems[0].PresetConfigBytes;
 
@@ -419,7 +417,7 @@ public class PackingMainViewModel : ToolTabViewModel
             {
                 AppendLog($"작업 시작: {gameTitle} [{mainGameId}] ({orderedItems.Count}개 디스크)", LogLevel.Highlight);
 
-                await PackingJobRunner.RunAsync(orderedItems, gameTitle, mainGameId, plan, _config.PS1.CompressLevel, assets, popsConfig, BuildProgressReporter(), _cts.Token);
+                await PackingJobRunner.RunAsync(orderedItems, gameTitle, mainGameId, plan, AppConfig.Instance.PS1.CompressLevel, assets, popsConfig, BuildProgressReporter(), _cts.Token);
 
                 ProgressPct = 100;
                 AppendLog($"작업 완료: {plan.TargetOutputPath}", LogLevel.Ok);

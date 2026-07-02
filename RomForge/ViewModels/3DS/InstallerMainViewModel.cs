@@ -40,7 +40,7 @@ public class InstallerMainViewModel : ToolTabViewModel
 
     public InstalledTitlesMainViewModel InstalledTitles { get; }
 
-    public InstallMainViewModel Install { get; }
+    public InstallMainViewModel Install { get; } = new();
 
     public string SdPath
     {
@@ -101,7 +101,6 @@ public class InstallerMainViewModel : ToolTabViewModel
     public InstallerMainViewModel()
     {
         InstalledTitles = new InstalledTitlesMainViewModel(msg => StatusMessage = msg);
-        Install = new InstallMainViewModel();
 
         Tools.Add(InstalledTitles);
         Tools.Add(Install);

@@ -50,12 +50,12 @@ public partial class MainWindow : Window
     private void GridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
     {
         var vm = (MainViewModel)DataContext;
-        vm.LogBoxHeight = LogRow.Height.Value;
+        MainViewModel.LogBoxHeight = LogRow.Height.Value;
     }
 
     private void MainWindow_Closing(object? sender, CancelEventArgs e)
     {
-        ViewModel.SaveConfig();
+        MainViewModel.SaveConfig();
 
         bool busy = ViewModel.IsAnyChildLocked();
 

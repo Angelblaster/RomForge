@@ -5,12 +5,9 @@ namespace RomForge.ViewModels.Settings;
 
 public class PatchSettingsMainViewModel : ToolTabViewModel
 {
-    private readonly AppConfig _config;
-
-    public PatchSettingsMainViewModel(AppConfig config)
+    public PatchSettingsMainViewModel()
     {
-        _config = config;
-        _config.Patch.PropertyChanged += (s, e) =>
+        AppConfig.Instance.Patch.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(PatchConfig.AutoCompress))
                 OnPropertyChanged(nameof(AutoCompress));
@@ -19,10 +16,10 @@ public class PatchSettingsMainViewModel : ToolTabViewModel
 
     public bool AutoCompress
     {
-        get => _config.Patch.AutoCompress;
+        get => AppConfig.Instance.Patch.AutoCompress;
         set
         {
-            _config.Patch.AutoCompress = value;
+            AppConfig.Instance.Patch.AutoCompress = value;
             OnPropertyChanged();
         }
     }

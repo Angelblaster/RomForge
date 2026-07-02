@@ -4,9 +4,9 @@ using NSW.Core;
 using NSW.WPF.Services;
 using NSW.WPF.ViewModels;
 using RomForge.Core;
-using RomForge.Core.UI.Command;
 using RomForge.Core.Models;
 using RomForge.Core.Services.Switch;
+using RomForge.Core.UI.Command;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -22,7 +22,6 @@ public class MergeMainViewModel : ToolTabViewModel
 
     private readonly Stopwatch _totalSw = new();
     private CancellationTokenSource? _cts;
-    private readonly AppConfig _config;
 
     private string _outputPath = string.Empty;
     private MergeMode? _currentMode;
@@ -97,10 +96,10 @@ public class MergeMainViewModel : ToolTabViewModel
 
     public int CompressLevel
     {
-        get => _config.Switch.CompressLevel;
+        get => AppConfig.Instance.Switch.CompressLevel;
         set
         {
-            _config.Switch.CompressLevel = value;
+            AppConfig.Instance.Switch.CompressLevel = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsCompressionOptionVisible));
         }
@@ -108,16 +107,16 @@ public class MergeMainViewModel : ToolTabViewModel
 
     public bool VerifyCompress
     {
-        get => _config.Switch.VerifyCompress;
-        set { _config.Switch.VerifyCompress = value; OnPropertyChanged(); }
+        get => AppConfig.Instance.Switch.VerifyCompress;
+        set { AppConfig.Instance.Switch.VerifyCompress = value; OnPropertyChanged(); }
     }
 
     public bool UseBlockMode
     {
-        get => _config.Switch.UseBlockMode;
+        get => AppConfig.Instance.Switch.UseBlockMode;
         set
         {
-            _config.Switch.UseBlockMode = value;
+            AppConfig.Instance.Switch.UseBlockMode = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(UseBlocklessMode));
         }
@@ -125,19 +124,19 @@ public class MergeMainViewModel : ToolTabViewModel
 
     public bool UseBlocklessMode
     {
-        get => _config.Switch.UseBlocklessMode;
+        get => AppConfig.Instance.Switch.UseBlocklessMode;
         set
         {
-            _config.Switch.UseBlocklessMode = value;
+            AppConfig.Instance.Switch.UseBlocklessMode = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(UseBlockMode));
         }
     }
 
-    public bool ForceKeyGen0
+    public static bool ForceKeyGen0
     {
-        get => _config.Switch.ForceKeyGen0;
-        set => _config.Switch.ForceKeyGen0 = value;
+        get => AppConfig.Instance.Switch.ForceKeyGen0;
+        set => AppConfig.Instance.Switch.ForceKeyGen0 = value;
     }
 
     public ICommand OpenWorkSpaceCommand { get; }
@@ -148,9 +147,8 @@ public class MergeMainViewModel : ToolTabViewModel
 
     #region Constructor
 
-    public MergeMainViewModel(AppConfig config)
+    public MergeMainViewModel()
     {
-        _config = config;
         OutputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "output");
         OpenWorkSpaceCommand = new RelayCommand(_ => ExecuteOpenWorkSpace());
 

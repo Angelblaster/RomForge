@@ -1,21 +1,15 @@
-﻿using RomForge.Core;
-
-namespace RomForge.ViewModels.Settings;
+﻿namespace RomForge.ViewModels.Settings;
 
 public class SettingsMainViewModel : MultiToolTabViewModel
 {
-    public PatchSettingsMainViewModel Patch { get; }
+    public PatchSettingsMainViewModel Patch { get; } = new();
 
-    public CompressSettingsMainViewModel Compress { get; }
+    public CompressSettingsMainViewModel Compress { get; } = new();
 
-    public PS1SettingsMainViewModel PS1 { get; }
+    public PS1SettingsMainViewModel PS1 { get; } = new();
 
-    public SettingsMainViewModel(AppConfig config)
+    public SettingsMainViewModel()
     {
-        Patch = new PatchSettingsMainViewModel(config);
-        Compress = new CompressSettingsMainViewModel(config);
-        PS1 = new PS1SettingsMainViewModel(config);
-
         Tools.Add(Patch);
         Tools.Add(Compress);
         Tools.Add(PS1);

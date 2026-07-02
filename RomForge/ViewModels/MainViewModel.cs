@@ -15,27 +15,26 @@ namespace RomForge.ViewModels;
 public class MainViewModel : ToolTabViewModel
 {
     private int _selectedTabIndex;
-    private readonly AppConfig _config = new AppConfig().Load();
 
-    public double LogBoxHeight
+    public static double LogBoxHeight
     {
-        get => _config.Common.LogBoxHeight;
-        set { _config.Common.LogBoxHeight = value; }
+        get => AppConfig.Instance.Common.LogBoxHeight;
+        set { AppConfig.Instance.Common.LogBoxHeight = value; }
     }
 
     public PatchMainViewModel PatchVM { get; }
 
-    public CompressMainViewModel CompressVM { get; }
+    public CompressMainViewModel CompressVM { get; } = new();
 
-    public SwitchMainViewModel SwitchMainVM { get; }
+    public SwitchMainViewModel SwitchMainVM { get; } = new();
 
-    public _3DSMainViewModel Main3DsVM { get; }
+    public _3DSMainViewModel Main3DsVM { get; } = new ();
 
-    public PS1MainViewModel PSMainVM { get; }
+    public PS1MainViewModel PSMainVM { get; } = new();
 
-    public UtilMainViewModel UtilMainVM { get; }
+    public UtilMainViewModel UtilMainVM { get; } = new();
 
-    public SettingsMainViewModel Settings { get; }
+    public SettingsMainViewModel Settings { get; } = new();
 
     public int SelectedTabIndex
     {
@@ -74,16 +73,10 @@ public class MainViewModel : ToolTabViewModel
 
     public MainViewModel()
     {
-        PatchVM = new PatchMainViewModel(_config, async (file) => await MapsToHashAndProcess(file));
-        CompressVM = new CompressMainViewModel(_config);
-        SwitchMainVM = new SwitchMainViewModel(_config);
+        PatchVM = new PatchMainViewModel(async (file) => await MapsToHashAndProcess(file));
         SwitchMainVM.MergeVM.SettingsClicked += async (s, e) => await NavigateSwitchCompressSettings();
-        Main3DsVM = new _3DSMainViewModel();
         Main3DsVM.RunNavigateCerts += MainVM_RunNavigateCerts;
-        PSMainVM = new PS1MainViewModel(_config);
         PSMainVM.RunNavigatePackingSettings += PS1MainVM_RunNavigatePackingSettings;
-        UtilMainVM = new UtilMainViewModel();
-        Settings = new SettingsMainViewModel(_config);
 
         Tools.Add(PatchVM);
         Tools.Add(CompressVM);
@@ -133,7 +126,7 @@ public class MainViewModel : ToolTabViewModel
         Settings.SelectedViewModel = Settings.PS1;
     }
 
-    public void SaveConfig() => _config.Save();
+    public static void SaveConfig() => AppConfig.Instance.Save();
 
     public bool IsAnyChildLocked()
     {   

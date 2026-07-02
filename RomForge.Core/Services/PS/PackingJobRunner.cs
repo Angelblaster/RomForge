@@ -1,7 +1,6 @@
 ﻿using Common;
 using PBP.Core.Models;
 using PBP.Core.Services;
-using RomForge.Core;
 using RomForge.Core.Models.PS;
 using System.IO;
 
@@ -11,14 +10,14 @@ public record PackingPlan(string TargetOutputPath, string? GameDirectory);
 
 public class PackingJobRunner
 {
-    public static PackingPlan PlanOutput(string firstDiscPath, string gameTitle, string mainGameId, AppConfig config)
+    public static PackingPlan PlanOutput(string firstDiscPath, string gameTitle, string mainGameId)
     {
         var baseDirectory = Path.GetDirectoryName(firstDiscPath)!;
 
         string targetOutputPath;
         string? gameDirectory = null;
 
-        if (config.PS1.UseGameIdMode)
+        if (AppConfig.Instance.PS1.UseGameIdMode)
         {
             gameDirectory = Path.Combine(baseDirectory, mainGameId);
             targetOutputPath = Path.Combine(gameDirectory, "eboot.pbp");

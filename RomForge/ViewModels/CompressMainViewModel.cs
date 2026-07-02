@@ -3,15 +3,16 @@ using CHD.Core.Services;
 using Common;
 using Common.WPF.ViewModels;
 using DolphinTool.Core.Services;
-using RomForge.Core.UI.Command;
+using RomForge.Core;
 using RomForge.Core.Models;
+using RomForge.Core.Models.Compression;
+using RomForge.Core.Services.Compression;
+using RomForge.Core.Services.Switch;
+using RomForge.Core.UI.Command;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
-using RomForge.Core.Services.Compression;
-using RomForge.Core.Models.Compression;
-using RomForge.Core.Services.Switch;
 
 namespace RomForge.ViewModels;
 
@@ -26,9 +27,9 @@ public class CompressMainViewModel : ToolTabViewModel
     };
 
     private CancellationTokenSource _cts = new();
-    private readonly Core.AppConfig _config;
 
     public ObservableCollection<LogEntry> LogEntries { get; } = [];
+
     public ObservableCollection<CompressFileItem> FileItems { get; } = [];
 
     public Visibility HintVisibility => FileItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -37,9 +38,8 @@ public class CompressMainViewModel : ToolTabViewModel
 
     public event Action<CompressFileItem>? ScrollToItemRequested;
 
-    public CompressMainViewModel(Core.AppConfig config)
+    public CompressMainViewModel()
     {
-        _config = config;
         RunCommand = new RelayCommand(async _ => await RunAsync(), _ => !IsLocked && FileItems.Count > 0);
         CancelCommand = new RelayCommand(_ => _cts.Cancel(), _ => IsLocked);
     }
@@ -131,17 +131,17 @@ public class CompressMainViewModel : ToolTabViewModel
                         item.Progress = p.Percent;
                     });
 
-                    int switchCompressLevel = _config.Switch.CompressLevel;
+                    int switchCompressLevel = AppConfig.Instance.Switch.CompressLevel;
                     if (switchCompressLevel < 3)
                         switchCompressLevel = 3;
 
                     switch (detected.Format)
                     {
                         case RomFormat.Nsp:
-                            await NspCompressService.CompressAsync(item.FilePath, _config.Switch.CompressLevel, _config.Switch.VerifyCompress, _config.Switch.UseBlockMode, progressHandler, AppendLog, _cts.Token);
+                            await NspCompressService.CompressAsync(item.FilePath, AppConfig.Instance.Switch.CompressLevel, AppConfig.Instance.Switch.VerifyCompress, AppConfig.Instance.Switch.UseBlockMode, progressHandler, AppendLog, _cts.Token);
                             break;
                         case RomFormat.Xci:
-                            await XciCompressService.CompressAsync(item.FilePath, _config.Switch.CompressLevel, _config.Switch.VerifyCompress, _config.Switch.UseBlockMode, progressHandler, AppendLog, _cts.Token);
+                            await XciCompressService.CompressAsync(item.FilePath, AppConfig.Instance.Switch.CompressLevel, AppConfig.Instance.Switch.VerifyCompress, AppConfig.Instance.Switch.UseBlockMode, progressHandler, AppendLog, _cts.Token);
                             break;
                         case RomFormat.Nsz:
                             await NspCompressService.DecompressAsync(item.FilePath, progressHandler, AppendLog, _cts.Token);
@@ -150,10 +150,10 @@ public class CompressMainViewModel : ToolTabViewModel
                             await XciCompressService.DecompressAsync(item.FilePath, progressHandler, AppendLog, _cts.Token);
                             break;
                         case RomFormat.Cci:
-                            await Z3dsArchiveService.CompressAsync(item.FilePath, _config.Azahar.CompressLevel, progressHandler, AppendLog, _cts.Token);
+                            await Z3dsArchiveService.CompressAsync(item.FilePath, AppConfig.Instance.Azahar.CompressLevel, progressHandler, AppendLog, _cts.Token);
                             break;
                         case RomFormat.Cia:
-                            await Z3dsArchiveService.CompressFromCiaAsync(item.FilePath, _config.Azahar.CompressLevel, progressHandler, AppendLog, _cts.Token);
+                            await Z3dsArchiveService.CompressFromCiaAsync(item.FilePath, AppConfig.Instance.Azahar.CompressLevel, progressHandler, AppendLog, _cts.Token);
                             break;
                         case RomFormat.ZCci:
                             await Z3dsArchiveService.DecompressAsync(item.FilePath, progressHandler, AppendLog, _cts.Token);
@@ -163,7 +163,7 @@ public class CompressMainViewModel : ToolTabViewModel
                         case RomFormat.Gdi:
                         case RomFormat.Chd:
                             {                                
-                                FileConverter chdConverter = new(_config.Chdman.Compression);
+                                FileConverter chdConverter = new(AppConfig.Instance.Chdman.Compression);
 
                                 chdConverter.LogMessage += (_, e) => AppendLog(e.Message, e.Level);
                                 chdConverter.ProgressChanged += (s, e) => Application.Current.Dispatcher.Invoke(() => item.Progress = e.Progress);
@@ -186,7 +186,7 @@ public class CompressMainViewModel : ToolTabViewModel
                                 dolphin.LogMessage += (_, e) => AppendLog(e.Message, e.Level);
                                 dolphin.ProgressChanged += (s, e) => Application.Current.Dispatcher.Invoke(() => item.Progress = e.Progress);
 
-                                await dolphin.ConvertFileAsync(item.FilePath, detected.Format.ToString(), detected.OutputExtension, _config.Dolphin.CompressLevel, _cts.Token);
+                                await dolphin.ConvertFileAsync(item.FilePath, detected.Format.ToString(), detected.OutputExtension, AppConfig.Instance.Dolphin.CompressLevel, _cts.Token);
                             }
                             break;
                         case RomFormat.Unknown:

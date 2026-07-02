@@ -77,6 +77,11 @@ public class AppConfig : ViewModelBase
     private static readonly string DefaultFilePath = Path.ChangeExtension(Environment.ProcessPath!, "config.json");
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
+    private static readonly Lazy<AppConfig> _instance = new(() => new AppConfig().LoadInternal());
+    public static AppConfig Instance => _instance.Value;
+
+    private AppConfig() { }
+
     private PatchConfig _patch = new();
     public PatchConfig Patch { get => _patch; set => SetProperty(ref _patch, value); }
 
@@ -95,14 +100,23 @@ public class AppConfig : ViewModelBase
     private PS1Config _ps1 = new();
     public PS1Config PS1 { get => _ps1; set => SetProperty(ref _ps1, value); }
 
-    public CommonConfig Common { get; set; } = new();
+    private CommonConfig _common = new();
+    public CommonConfig Common { get => _common; set => SetProperty(ref _common, value); }
 
-    public AppConfig Load()
+    private AppConfig LoadInternal()
     {
-        if (!File.Exists(DefaultFilePath)) { Save(); return this; }
+        if (!File.Exists(DefaultFilePath))
+        {
+            Save();
+            SubscribeToChanges();
+            return this;
+        }
+
         try
         {
-            var loaded = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(DefaultFilePath));
+            var json = File.ReadAllText(DefaultFilePath);
+            var loaded = JsonSerializer.Deserialize<AppConfig>(json);
+
             if (loaded != null)
             {
                 Common = loaded.Common ?? new();
@@ -110,13 +124,16 @@ public class AppConfig : ViewModelBase
                 Chdman = loaded.Chdman ?? new();
                 Switch = loaded.Switch ?? new();
                 Azahar = loaded.Azahar ?? new();
-                Dolphin = loaded.Dolphin ?? new();                
+                Dolphin = loaded.Dolphin ?? new();
                 PS1 = loaded.PS1 ?? new();
             }
-
-            SubscribeToChanges();
         }
-        catch { Save(); }
+        catch
+        {
+            Save();
+        }
+
+        SubscribeToChanges();
         return this;
     }
 

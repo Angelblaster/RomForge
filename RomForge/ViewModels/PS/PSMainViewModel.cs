@@ -1,23 +1,19 @@
-﻿using RomForge.Core;
-
-namespace RomForge.ViewModels.PS;
+﻿namespace RomForge.ViewModels.PS;
 
 public class PS1MainViewModel : MultiToolTabViewModel
 {
-    public PackingMainViewModel PackingVM { get; }
+    public PackingMainViewModel PackingVM { get; } = new();
 
     public UnpackingMainViewModel UnPackingVM { get; } = new();
 
-    public PSPConverterViewModel ConverterVM { get; }
+    public PSPConverterViewModel ConverterVM { get; } = new();
 
 
     public event EventHandler RunNavigatePackingSettings;
 
-    public PS1MainViewModel(AppConfig config)
+    public PS1MainViewModel()
     {
-        PackingVM = new PackingMainViewModel(config);
         PackingVM.RunNavigateSettings += (sender, e) => RunNavigatePackingSettings?.Invoke(sender, e);
-        ConverterVM = new PSPConverterViewModel(config);
 
         Tools.Add(PackingVM);
         Tools.Add(UnPackingVM);

@@ -6,17 +6,14 @@ public class SwitchMainViewModel : MultiToolTabViewModel
 {
     public RepackMainViewModel RepackVM { get; } = new();
 
-    public MergeMainViewModel MergeVM { get; }
+    public MergeMainViewModel MergeVM { get; } = new();
 
-    public ConverterMainViewModel ConverterVM { get; }
+    public ConverterMainViewModel ConverterVM { get; } = new();
 
     public KeygenMainViewModel KeygenVM { get; } = new();
 
-    public SwitchMainViewModel(AppConfig config)
+    public SwitchMainViewModel()
     {
-        MergeVM = new MergeMainViewModel(config);
-        ConverterVM = new ConverterMainViewModel(config);
-
         Tools.Add(RepackVM);
         Tools.Add(MergeVM);
         Tools.Add(ConverterVM);

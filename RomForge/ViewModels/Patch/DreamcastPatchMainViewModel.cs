@@ -3,6 +3,7 @@ using Common;
 using Common.WPF.ViewModels;
 using NSW.WPF.Services;
 using Patch.Core.Formats.DCP.Services;
+using RomForge.Core;
 using RomForge.Core.Models;
 using RomForge.Core.Services.Patch;
 using System.IO;
@@ -13,7 +14,6 @@ namespace RomForge.ViewModels.Patch;
 
 public class DreamcastPatchMainViewModel : ToolTabViewModel, IPatchViewModel
 {
-    private readonly Core.AppConfig _config;
     private CancellationTokenSource? _runCts;
 
     public System.Collections.ObjectModel.ObservableCollection<LogEntry> LogEntries { get; } = [];
@@ -45,15 +45,16 @@ public class DreamcastPatchMainViewModel : ToolTabViewModel, IPatchViewModel
 
     public bool AutoCompress
     {
-        get => _config.Patch.AutoCompress;
+        get => AppConfig.Instance.Patch.AutoCompress;
         set
         {
-            _config.Patch.AutoCompress = value;
+            AppConfig.Instance.Patch.AutoCompress = value;
             OnPropertyChanged(nameof(AutoCompress));
         }
     }
 
     public string SourceLabel => Path.GetFileName(SourcePath) ?? "원본 GDI를 드래그하거나 클릭하세요";
+
     public string PatchLabel => Path.GetFileName(PatchPath) ?? "DCP 패치를 드래그하거나 클릭하세요";
 
     private int _progress;
@@ -77,19 +78,17 @@ public class DreamcastPatchMainViewModel : ToolTabViewModel, IPatchViewModel
         set { _progressStatus = value; OnPropertyChanged(); }
     }
 
-    public DreamcastPatchMainViewModel(Core.AppConfig config)
+    public DreamcastPatchMainViewModel()
     {
-        _config = config;
-
-        _config.PropertyChanged += (s, e) =>
+        AppConfig.Instance.PropertyChanged += (s, e) =>
         {
-            if (e.PropertyName == nameof(Core.AppConfig.Patch))
+            if (e.PropertyName == nameof(AppConfig.Patch))
                 OnPropertyChanged(nameof(AutoCompress));
         };
 
-        _config.Patch.PropertyChanged += (s, e) =>
+        AppConfig.Instance.Patch.PropertyChanged += (s, e) =>
         {
-            if (e.PropertyName == nameof(Core.PatchConfig.AutoCompress))
+            if (e.PropertyName == nameof(PatchConfig.AutoCompress))
                 OnPropertyChanged(nameof(AutoCompress));
         };
     }
@@ -139,7 +138,7 @@ public class DreamcastPatchMainViewModel : ToolTabViewModel, IPatchViewModel
                 ProgressStatus = "CHD 변환 중...";
                 Log("CHD 변환 시작", LogLevel.Highlight);
 
-                FileConverter converter = new();
+                FileConverter converter = new(AppConfig.Instance.Chdman.Compression);
                 converter.LogMessage += (_, e) => Log(e.Message, e.Level);
                 converter.ProgressChanged += (_, e) => Progress = 50 + (e.Progress / 2);
 

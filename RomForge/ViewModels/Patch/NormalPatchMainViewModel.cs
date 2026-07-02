@@ -2,6 +2,7 @@
 using Common.WPF.ViewModels;
 using NSW.WPF.Services;
 using Patch.Core;
+using RomForge.Core;
 using RomForge.Core.Models;
 using RomForge.Core.Services.Compression;
 using RomForge.Core.Services.Patch;
@@ -13,7 +14,6 @@ namespace RomForge.ViewModels.Patch;
 
 public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
 {
-    private readonly Core.AppConfig _config;
     private CancellationTokenSource? _runCts;
 
     public System.Collections.ObjectModel.ObservableCollection<LogEntry> LogEntries { get; } = [];
@@ -45,10 +45,10 @@ public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
 
     public bool AutoCompress
     {
-        get => _config.Patch.AutoCompress;
+        get => AppConfig.Instance.Patch.AutoCompress;
         set
         {
-            _config.Patch.AutoCompress = value;
+            AppConfig.Instance.Patch.AutoCompress = value;
             OnPropertyChanged(nameof(AutoCompress));
         }
     }
@@ -80,19 +80,17 @@ public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
         set { _progressStatus = value; OnPropertyChanged(); }
     }
 
-    public NormalPatchMainViewModel(Core.AppConfig config)
+    public NormalPatchMainViewModel()
     {
-        _config = config;
-
-        _config.PropertyChanged += (s, e) =>
+        AppConfig.Instance.PropertyChanged += (s, e) =>
         {
-            if (e.PropertyName == nameof(Core.AppConfig.Patch))
+            if (e.PropertyName == nameof(AppConfig.Patch))
                 OnPropertyChanged(nameof(AutoCompress));
         };
 
-        _config.Patch.PropertyChanged += (s, e) =>
+        AppConfig.Instance.Patch.PropertyChanged += (s, e) =>
         {
-            if (e.PropertyName == nameof(Core.PatchConfig.AutoCompress))
+            if (e.PropertyName == nameof(PatchConfig.AutoCompress))
                 OnPropertyChanged(nameof(AutoCompress));
         };
     }
@@ -124,7 +122,7 @@ public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
             p => Progress = p,
             s => ProgressStatus = s,
             AutoCompress,
-            _config.Dolphin.CompressLevel);
+            AppConfig.Instance.Dolphin.CompressLevel);
 
         try
         {

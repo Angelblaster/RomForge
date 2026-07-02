@@ -3,7 +3,7 @@ using RomForge.Core;
 
 namespace RomForge.ViewModels.Settings;
 
-public class CompressSettingsMainViewModel(AppConfig config) : ToolTabViewModel
+public class CompressSettingsMainViewModel() : ToolTabViewModel
 {
     private int _selectedTabIndex;
     public int SelectedTabIndex
@@ -27,29 +27,32 @@ public class CompressSettingsMainViewModel(AppConfig config) : ToolTabViewModel
 
     public ChdmanCompressionOption ChdmanCompression
     {
-        get => ChdmanCompressionOptions.First(x => x.Value == config.Chdman.Compression);
-        set { config.Chdman.Compression = value.Value; OnPropertyChanged(); }
+        get => ChdmanCompressionOptions.First(x => x.Value == AppConfig.Instance.Chdman.Compression);
+        set { AppConfig.Instance.Chdman.Compression = value.Value; OnPropertyChanged(); }
     }
 
     public double SwitchCompressLevel
     {
-        get => config.Switch.CompressLevel;
-        set { config.Switch.CompressLevel = (int)value; OnPropertyChanged(); }
+        get => AppConfig.Instance.Switch.CompressLevel;
+        set { AppConfig.Instance.Switch.CompressLevel = (int)value; OnPropertyChanged(); }
     }
 
     public bool SwitchIsValidationEnabled
     {
-        get => config.Switch.VerifyCompress;
-        set { config.Switch.VerifyCompress = value; OnPropertyChanged(); }
+        get => AppConfig.Instance.Switch.VerifyCompress;
+        set { AppConfig.Instance.Switch.VerifyCompress = value; OnPropertyChanged(); }
     }
 
     public bool SwitchUseBlockMode
     {
-        get => config.Switch.UseBlockMode;
+        get => AppConfig.Instance.Switch.UseBlockMode;
         set
         {
-            config.Switch.UseBlockMode = value;
-            if (value) config.Switch.UseBlocklessMode = false;
+            AppConfig.Instance.Switch.UseBlockMode = value;
+
+            if (value)
+                AppConfig.Instance.Switch.UseBlocklessMode = false;
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(SwitchUseBlocklessMode));
         }
@@ -57,11 +60,14 @@ public class CompressSettingsMainViewModel(AppConfig config) : ToolTabViewModel
 
     public bool SwitchUseBlocklessMode
     {
-        get => config.Switch.UseBlocklessMode;
+        get => AppConfig.Instance.Switch.UseBlocklessMode;
         set
         {
-            config.Switch.UseBlocklessMode = value;
-            if (value) config.Switch.UseBlockMode = false;
+            AppConfig.Instance.Switch.UseBlocklessMode = value;
+
+            if (value) 
+                AppConfig.Instance.Switch.UseBlockMode = false;
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(SwitchUseBlockMode));
         }
@@ -69,13 +75,13 @@ public class CompressSettingsMainViewModel(AppConfig config) : ToolTabViewModel
 
     public double AzaharCompressLevel
     {
-        get => config.Azahar.CompressLevel;
-        set { config.Azahar.CompressLevel = (int)value; OnPropertyChanged(); }
+        get => AppConfig.Instance.Azahar.CompressLevel;
+        set { AppConfig.Instance.Azahar.CompressLevel = (int)value; OnPropertyChanged(); }
     }
 
     public double DolphinCompressLevel
     {
-        get => config.Dolphin.CompressLevel;
-        set { config.Dolphin.CompressLevel = (int)value; OnPropertyChanged(); }
+        get => AppConfig.Instance.Dolphin.CompressLevel;
+        set { AppConfig.Instance.Dolphin.CompressLevel = (int)value; OnPropertyChanged(); }
     }
 }

@@ -3,21 +3,24 @@ using RomForge.Core;
 
 namespace RomForge.ViewModels.Settings;
 
-public class PS1SettingsMainViewModel(AppConfig config) : ToolTabViewModel
+public class PS1SettingsMainViewModel() : ToolTabViewModel
 {
     public double CompressLevel
     {
-        get => config.PS1.CompressLevel;
-        set { config.PS1.CompressLevel = (int)value; OnPropertyChanged(); }
+        get => AppConfig.Instance.PS1.CompressLevel;
+        set { AppConfig.Instance.PS1.CompressLevel = (int)value; OnPropertyChanged(); }
     }
 
     public bool UseGameIdMode
     {
-        get => config.PS1.UseGameIdMode;
+        get => AppConfig.Instance.PS1.UseGameIdMode;
         set
         {
-            config.PS1.UseGameIdMode = value;
-            if (value) config.PS1.UseFileNameMode = false;
+            AppConfig.Instance.PS1.UseGameIdMode = value;
+
+            if (value) 
+                AppConfig.Instance.PS1.UseFileNameMode = false;
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(UseFileNameMode));
         }
@@ -25,11 +28,14 @@ public class PS1SettingsMainViewModel(AppConfig config) : ToolTabViewModel
 
     public bool UseFileNameMode
     {
-        get => config.PS1.UseFileNameMode;
+        get => AppConfig.Instance.PS1.UseFileNameMode;
         set
         {
-            config.PS1.UseFileNameMode = value;
-            if (value) config.PS1.UseGameIdMode = false;
+            AppConfig.Instance.PS1.UseFileNameMode = value;
+
+            if (value) 
+                AppConfig.Instance.PS1.UseGameIdMode = false;
+
             OnPropertyChanged();
             OnPropertyChanged(nameof(UseGameIdMode));
         }

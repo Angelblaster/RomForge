@@ -17,7 +17,7 @@ public class CompressKnownConverter(Action<string, LogLevel> log, Action<int> se
                     setStatus("CHD 변환 중...");
                     setProgress(0);
 
-                    FileConverter converter = new();
+                    FileConverter converter = new(AppConfig.Instance.Chdman.Compression);
                     converter.LogMessage += (_, e) => log(e.Message, e.Level);
                     converter.ProgressChanged += (_, e) => setProgress(e.Progress);
 
@@ -41,7 +41,7 @@ public class CompressKnownConverter(Action<string, LogLevel> log, Action<int> se
                     setStatus("CHD 변환 중...");
                     setProgress(0);
 
-                    FileConverter converter = new();
+                    FileConverter converter = new(AppConfig.Instance.Chdman.Compression);
                     converter.LogMessage += (_, e) => log(e.Message, e.Level);
                     converter.ProgressChanged += (_, e) => setProgress(e.Progress);
 

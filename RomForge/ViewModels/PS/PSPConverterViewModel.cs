@@ -16,7 +16,6 @@ public class PSPConverterViewModel : ToolTabViewModel
 {
     #region Fields
 
-    private readonly AppConfig _config;
     private bool _isConverting;
     private CancellationTokenSource _cts = new();
     private readonly CsoService _csoService = new();
@@ -55,9 +54,8 @@ public class PSPConverterViewModel : ToolTabViewModel
 
     #region Constructor
 
-    public PSPConverterViewModel(AppConfig config)
+    public PSPConverterViewModel()
     {
-        _config = config;
         RunCommand = new RelayCommand(async _ => await RunAsync(), _ => !IsConverting && FileItems.Count > 0);
         CancelCommand = new RelayCommand(_ => _cts.Cancel(), _ => IsConverting);
     }
@@ -162,7 +160,7 @@ public class PSPConverterViewModel : ToolTabViewModel
                                 break;
 
                             case ("iso", "chd"):
-                                await _csoService.CompressToChdAsync(item.FilePath, outPath, _config.Chdman.Compression, _cts.Token);
+                                await _csoService.CompressToChdAsync(item.FilePath, outPath, AppConfig.Instance.Chdman.Compression, _cts.Token);
                                 break;
 
                             case ("cso", "iso"):
@@ -172,7 +170,7 @@ public class PSPConverterViewModel : ToolTabViewModel
                                 break;
 
                             case ("cso", "chd"):
-                                await _csoService.CompressCsoToChdAsync(item.FilePath, outPath, progressHandler, _config.Chdman.Compression, _cts.Token);
+                                await _csoService.CompressCsoToChdAsync(item.FilePath, outPath, progressHandler, AppConfig.Instance.Chdman.Compression, _cts.Token);
                                 break;
 
                             case ("chd", "iso"):

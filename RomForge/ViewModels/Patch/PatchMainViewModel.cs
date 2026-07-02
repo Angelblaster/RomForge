@@ -6,14 +6,13 @@ namespace RomForge.ViewModels.Patch;
 
 public class PatchMainViewModel : MultiToolTabViewModel
 {
-    private readonly Core.AppConfig _config;
     private readonly Action<string> _navigateToHashAction;
 
-    public NormalPatchMainViewModel NormalVM { get; }
+    public NormalPatchMainViewModel NormalVM { get; } = new();
 
     public ArcadePatchMainViewModel ArcadeVM { get; } = new();
 
-    public DreamcastPatchMainViewModel DreamcastVM { get; }
+    public DreamcastPatchMainViewModel DreamcastVM { get; } = new();
 
     public ICommand RunCommand { get; }
 
@@ -23,13 +22,9 @@ public class PatchMainViewModel : MultiToolTabViewModel
 
     private IPatchViewModel? SelectedPatchVM => SelectedTool as IPatchViewModel;
 
-    public PatchMainViewModel(Core.AppConfig config, Action<string> navigateToHashAction)
+    public PatchMainViewModel(Action<string> navigateToHashAction)
     {
-        _config = config;
         _navigateToHashAction = navigateToHashAction;
-
-        NormalVM = new NormalPatchMainViewModel(_config);
-        DreamcastVM = new DreamcastPatchMainViewModel(_config);
 
         RunCommand = new RelayCommand(async _ => await RunAsync());
         CancelCommand = new RelayCommand(_ => Cancel());
