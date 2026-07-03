@@ -186,14 +186,14 @@ public class PbpDiscEntry : IDisposable, IAsyncDisposable
 
     public PbpDiscStream GetDiscStream() => new(this);
 
-    public void CopyTo(Stream destination, CancellationToken cancellationToken)
+    public void CopyTo(Stream destination, CancellationToken ct)
     {
         uint totSize = 0;
         var outBuffer = new byte[16 * ISO_BLOCK_SIZE];
 
         for (var i = 0; i < IsoIndex.Count; i++)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             var bufferSize = ReadBlock(i, outBuffer);
             totSize += bufferSize;

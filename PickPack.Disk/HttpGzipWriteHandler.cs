@@ -4,15 +4,15 @@ namespace PickPack.Disk
 {
     public class HttpGzipWriteHandler(HttpClient httpClient, Action<int, string, string?> progressCallback, long compressedSize, long uncompressedSize) : IImageWriteHandler
     {
-        public async Task<(Stream stream, long length)> OpenStreamAsync(string imageUrl, CancellationToken cancellationToken)
+        public async Task<(Stream stream, long length)> OpenStreamAsync(string imageUrl, CancellationToken ct)
         {
             progressCallback(0, "이미지 다운로드 시작...", string.Empty);
 
-            var response = await httpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            var response = await httpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead, ct);
 
             response.EnsureSuccessStatusCode();
 
-            var httpStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var httpStream = await response.Content.ReadAsStreamAsync(ct);
             var progressStream = new ProgressReportingStream(httpStream, compressedSize, progressCallback);
             var gzipStream = new GZipInputStream(progressStream);
             var wrapperStream = new CompositeDisposableStream(gzipStream, new MultiDisposable(progressStream, httpStream, response));

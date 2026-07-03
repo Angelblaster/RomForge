@@ -40,9 +40,9 @@ namespace PickPack.Disk
 
         #region Public
 
-        public void Initialize(CancellationToken cancellationToken)
+        public void Initialize(CancellationToken ct)
         {
-            _cancellationToken = cancellationToken;
+            _cancellationToken = ct;
             _stopwatch = Stopwatch.StartNew();
             _progressHistory.Clear();
         }

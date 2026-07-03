@@ -67,10 +67,9 @@ public class AesCbcSubStream(Stream baseStream, long start, long length, byte[] 
         return copyLen;
     }
 
-    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-    => Task.FromResult(Read(buffer, offset, count));
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct) => Task.FromResult(Read(buffer, offset, count));
 
-    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
     {
         byte[] tmp = new byte[buffer.Length];
         int read = Read(tmp, 0, tmp.Length);

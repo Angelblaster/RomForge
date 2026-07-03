@@ -27,7 +27,7 @@ public class FileConverter : IDisposable
 
     }
 
-    public async Task<ConversionResult> ConvertFileAsync(string filePath, CancellationToken cancellationToken = default)
+    public async Task<ConversionResult> ConvertFileAsync(string filePath, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -45,10 +45,10 @@ public class FileConverter : IDisposable
 
         return source.Format switch
         {
-            InputFormat.Chd => await ConvertFromChdAsync(source, cancellationToken),
-            InputFormat.Iso => await ConvertIsoChdAsync(source, cancellationToken),
-            InputFormat.BinCue => await ConvertToChdAsync(source, cancellationToken),
-            InputFormat.Gdi => await ConvertToChdAsync(source, cancellationToken),
+            InputFormat.Chd => await ConvertFromChdAsync(source, ct),
+            InputFormat.Iso => await ConvertIsoChdAsync(source, ct),
+            InputFormat.BinCue => await ConvertToChdAsync(source, ct),
+            InputFormat.Gdi => await ConvertToChdAsync(source, ct),
 
             _ => ConversionResult.Fail($"지원하지 않는 형식: {source.Format}")
         };

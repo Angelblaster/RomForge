@@ -62,7 +62,7 @@ public sealed class ChdmanService : IDisposable
         _logCallback = msg => { if (!string.IsNullOrEmpty(msg)) ErrorReceived?.Invoke(this, msg); };
     }
 
-    public Task<bool> CreateCdAsync(string cuePath, string chdPath, CancellationToken cancellationToken = default)
+    public Task<bool> CreateCdAsync(string cuePath, string chdPath, CancellationToken ct = default)
     {
         cuePath = Path.GetFullPath(cuePath);
         chdPath = Path.GetFullPath(chdPath);
@@ -72,10 +72,10 @@ public sealed class ChdmanService : IDisposable
             input: Path.GetFileName(cuePath),
             output: chdPath,
             invoke: chdman_create_cd,
-            cancellationToken: cancellationToken);
+            ct: ct);
     }
 
-    public Task<bool> CreateDvdAsync(string isoPath, string chdPath, string compression = "zlib", CancellationToken cancellationToken = default)
+    public Task<bool> CreateDvdAsync(string isoPath, string chdPath, string compression = "zlib", CancellationToken ct = default)
     {
         isoPath = Path.GetFullPath(isoPath);
         chdPath = Path.GetFullPath(chdPath);
@@ -85,10 +85,10 @@ public sealed class ChdmanService : IDisposable
             input: isoPath,
             output: chdPath,
             invoke: (i, o, p, l) => chdman_create_dvd(i, o, compression, p, l),
-            cancellationToken: cancellationToken);
+            ct: ct);
     }
 
-    public Task<bool> ExtractCdAsync(string chdPath, string cuePath, CancellationToken cancellationToken = default)
+    public Task<bool> ExtractCdAsync(string chdPath, string cuePath, CancellationToken ct = default)
     {
         chdPath = Path.GetFullPath(chdPath);
         cuePath = Path.GetFullPath(cuePath);
@@ -98,10 +98,10 @@ public sealed class ChdmanService : IDisposable
             input: chdPath,
             output: cuePath,
             invoke: chdman_extract_cd,
-            cancellationToken: cancellationToken);
+            ct: ct);
     }
 
-    public Task<bool> ExtractRawAsync(string chdPath, string isoPath, CancellationToken cancellationToken = default)
+    public Task<bool> ExtractRawAsync(string chdPath, string isoPath, CancellationToken ct = default)
     {
         chdPath = Path.GetFullPath(chdPath);
         isoPath = Path.GetFullPath(isoPath);
@@ -111,20 +111,20 @@ public sealed class ChdmanService : IDisposable
             input: chdPath,
             output: isoPath,
             invoke: chdman_extract_raw,
-            cancellationToken: cancellationToken);
+            ct: ct);
     }
 
-    private async Task<bool> RunLockedAsync(string workingDir, string input, string output, Func<string, string, ProgressCallback, LogCallback, int> invoke, CancellationToken cancellationToken)
+    private async Task<bool> RunLockedAsync(string workingDir, string input, string output, Func<string, string, ProgressCallback, LogCallback, int> invoke, CancellationToken ct)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _lock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var cancelReg = cancellationToken.Register(static () => chdman_cancel());
+            using var cancelReg = ct.Register(static () => chdman_cancel());
 
-            return await Task.Run(() => RunWithCwd(workingDir, input, output, invoke, cancelReg, cancellationToken),
-                                  cancellationToken)
+            return await Task.Run(() => RunWithCwd(workingDir, input, output, invoke, cancelReg, ct),
+                                  ct)
                              .ConfigureAwait(false);
         }
         finally
@@ -133,7 +133,7 @@ public sealed class ChdmanService : IDisposable
         }
     }
 
-    private bool RunWithCwd(string workingDir, string input, string output, Func<string, string, ProgressCallback, LogCallback, int> invoke, CancellationTokenRegistration cancelReg, CancellationToken cancellationToken)
+    private bool RunWithCwd(string workingDir, string input, string output, Func<string, string, ProgressCallback, LogCallback, int> invoke, CancellationTokenRegistration cancelReg, CancellationToken ct)
     {
         string originalDir = Directory.GetCurrentDirectory();
         try
@@ -143,8 +143,8 @@ public sealed class ChdmanService : IDisposable
 
             cancelReg.Dispose();
 
-            if (cancellationToken.IsCancellationRequested || result == -1)
-                throw new OperationCanceledException(cancellationToken);
+            if (ct.IsCancellationRequested || result == -1)
+                throw new OperationCanceledException(ct);
 
             return result == 0;
         }

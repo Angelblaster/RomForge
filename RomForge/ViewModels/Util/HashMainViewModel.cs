@@ -200,7 +200,7 @@ public class HashMainViewModel : ToolTabViewModel
         }
     }
 
-    private string ComputeHash(HashFileItem item, HashAlgorithmType algoType, CancellationToken token)
+    private string ComputeHash(HashFileItem item, HashAlgorithmType algoType, CancellationToken ct = default)
     {
         try
         {
@@ -219,7 +219,7 @@ public class HashMainViewModel : ToolTabViewModel
                     byte[] hashBytes = crc.GetHashAndReset();
                     uint crcValue = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(hashBytes);
                     return crcValue.ToString("x8");
-                }, token);
+                }, ct);
             }
 
             if (algoType == HashAlgorithmType.BLAKE3)
@@ -229,7 +229,7 @@ public class HashMainViewModel : ToolTabViewModel
                 return ProcessNonCryptoStream(fs, totalBytes, item, (buf, len) => hasher.Update(new ReadOnlySpan<byte>(buf, 0, len)), () =>
                 {
                     return FormatHex(hasher.Finalize().ToString());
-                }, token);
+                }, ct);
             }
 
             using var algorithm = CreateHashAlgorithm(algoType);
@@ -243,7 +243,7 @@ public class HashMainViewModel : ToolTabViewModel
 
             while ((read = fs.Read(buffer, 0, buffer.Length)) > 0)
             {
-                token.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
                 totalRead += read;
 
                 if (totalRead == totalBytes)
@@ -273,7 +273,7 @@ public class HashMainViewModel : ToolTabViewModel
         }
     }
 
-    private static string ProcessNonCryptoStream(FileStream fs, long totalBytes, HashFileItem item, Action<byte[], int> appendAction, Func<string> finalizeAction, CancellationToken token)
+    private static string ProcessNonCryptoStream(FileStream fs, long totalBytes, HashFileItem item, Action<byte[], int> appendAction, Func<string> finalizeAction, CancellationToken ct = default)
     {
         byte[] buffer = new byte[1024 * 64];
         long totalRead = 0;
@@ -281,7 +281,7 @@ public class HashMainViewModel : ToolTabViewModel
 
         while ((read = fs.Read(buffer, 0, buffer.Length)) > 0)
         {
-            token.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
             totalRead += read;
 
             appendAction(buffer, read);

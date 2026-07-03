@@ -39,11 +39,11 @@ public static class Xdelta3
 
     private static string GetLastError() => Marshal.PtrToStringAnsi(xd3_get_last_error()) ?? "unknown error";
 
-    public static void ApplyPatch(string sourcePath, string patchPath, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken cancellationToken = default)
+    public static void ApplyPatch(string sourcePath, string patchPath, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         ValidateInputFiles(sourcePath, patchPath);
 
-        using (cancellationToken.Register(() => xd3_cancel()))
+        using (ct.Register(() => xd3_cancel()))
         {
             if (progress is null)
             {
@@ -52,13 +52,7 @@ public static class Xdelta3
             }
 
             long total = new FileInfo(sourcePath).Length;
-
-            var reporter = new ProgressReporter(
-                "패치중...",
-                string.Empty,
-                total,
-                progress);
-
+            var reporter = new ProgressReporter("패치중...", string.Empty, total, progress);
             var report = reporter.CreateAction();
 
             ProgressCallback cb = p =>
@@ -76,26 +70,33 @@ public static class Xdelta3
             finally
             {
                 handle.Free();
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
             }
         }
     }
 
-    public static byte[] ApplyPatch(byte[] sourceData, byte[] patchData, IProgress<ProgressInfo>? progress = null, CancellationToken cancellationToken = default)
+    public static byte[] ApplyPatch(byte[] sourceData, byte[] patchData, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         int ret;
         IntPtr outPtr;
         nuint outSize;
 
-        using (cancellationToken.Register(() => xd3_cancel()))
+        using (ct.Register(() => xd3_cancel()))
         {
             if (progress is null)
-            {
                 ret = xd3_apply_patch_mem(sourceData, (nuint)sourceData.Length, patchData, (nuint)patchData.Length, out outPtr, out outSize, IntPtr.Zero);
-            }
             else
             {
-                ProgressCallback cb = p => progress.Report(new ProgressInfo((int)Math.Min(p * 100.0, 100.0), "", "", "", ""));
+                long total = sourceData.Length;
+                var reporter = new ProgressReporter("패치중...", string.Empty, total, progress);
+                var report = reporter.CreateAction();
+
+                ProgressCallback cb = p =>
+                {
+                    long current = (long)(p * total);
+                    report(current, total);
+                };
+
                 GCHandle handle = GCHandle.Alloc(cb);
 
                 try
@@ -105,7 +106,7 @@ public static class Xdelta3
                 finally
                 {
                     handle.Free();
-                    cancellationToken.ThrowIfCancellationRequested();
+                    ct.ThrowIfCancellationRequested();
                 }
             }
         }
@@ -115,7 +116,9 @@ public static class Xdelta3
         try
         {
             var result = new byte[(int)outSize];
+
             Marshal.Copy(outPtr, result, 0, (int)outSize);
+
             return result;
         }
         finally
@@ -124,20 +127,27 @@ public static class Xdelta3
         }
     }
 
-    public static void CreatePatch(string sourcePath, string newPath, string patchPath, IProgress<ProgressInfo>? progress = null, CancellationToken cancellationToken = default)
+    public static void CreatePatch(string sourcePath, string newPath, string patchPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         ValidateInputFiles(sourcePath, newPath);
         int result;
 
-        using (cancellationToken.Register(() => xd3_cancel()))
+        using (ct.Register(() => xd3_cancel()))
         {
             if (progress is null)
-            {
                 result = xd3_create_patch_w(sourcePath, newPath, patchPath, IntPtr.Zero);
-            }
             else
             {
-                ProgressCallback cb = p => progress.Report(new ProgressInfo((int)Math.Min(p * 100.0, 100.0), "", "", "", ""));
+                long total = new FileInfo(newPath).Length;
+                var reporter = new ProgressReporter("패치 생성중...", string.Empty, total, progress);
+                var report = reporter.CreateAction();
+
+                ProgressCallback cb = p =>
+                {
+                    long current = (long)(p * total);
+                    report(current, total);
+                };
+
                 GCHandle handle = GCHandle.Alloc(cb);
 
                 try
@@ -147,7 +157,7 @@ public static class Xdelta3
                 finally
                 {
                     handle.Free();
-                    cancellationToken.ThrowIfCancellationRequested();
+                    ct.ThrowIfCancellationRequested();
                 }
             }
         }

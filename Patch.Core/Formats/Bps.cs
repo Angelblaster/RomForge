@@ -6,32 +6,32 @@ public static class Bps
 {
     private static readonly byte[] HeaderBytes = [(byte)'B', (byte)'P', (byte)'S', (byte)'1'];
 
-    public static async Task ApplyPatchAsync(string sourcePath, string patchPath, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken cancellation = default)
+    public static async Task ApplyPatchAsync(string sourcePath, string patchPath, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         ValidateInputFiles(sourcePath, patchPath);
 
-        byte[] source = await File.ReadAllBytesAsync(sourcePath, cancellation);
-        byte[] patch = await File.ReadAllBytesAsync(patchPath, cancellation);
-        byte[] result = await Task.Run(() => Decode(source, patch, progress, cancellation), cancellation);
+        byte[] source = await File.ReadAllBytesAsync(sourcePath, ct);
+        byte[] patch = await File.ReadAllBytesAsync(patchPath, ct);
+        byte[] result = await Task.Run(() => Decode(source, patch, progress, ct), ct);
 
-        await File.WriteAllBytesAsync(outputPath, result, cancellation);
+        await File.WriteAllBytesAsync(outputPath, result, ct);
     }
 
-    public static Task<byte[]> ApplyPatchAsync(byte[] sourceData, byte[] patchData, IProgress<ProgressInfo>? progress = null, CancellationToken cancellation = default)
-        => Task.Run(() => Decode(sourceData, patchData, progress, cancellation), cancellation);
+    public static Task<byte[]> ApplyPatchAsync(byte[] sourceData, byte[] patchData, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
+        => Task.Run(() => Decode(sourceData, patchData, progress, ct), ct);
 
-    public static async Task CreatePatchAsync(string sourcePath, string newPath, string patchPath, IProgress<ProgressInfo>? progress = null, CancellationToken cancellation = default)
+    public static async Task CreatePatchAsync(string sourcePath, string newPath, string patchPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         ValidateInputFiles(sourcePath, newPath);
 
-        byte[] source = await File.ReadAllBytesAsync(sourcePath, cancellation);
-        byte[] target = await File.ReadAllBytesAsync(newPath, cancellation);
-        byte[] result = await Task.Run(() => Encode(source, target, progress, cancellation), cancellation);
+        byte[] source = await File.ReadAllBytesAsync(sourcePath, ct);
+        byte[] target = await File.ReadAllBytesAsync(newPath, ct);
+        byte[] result = await Task.Run(() => Encode(source, target, progress, ct), ct);
 
-        await File.WriteAllBytesAsync(patchPath, result, cancellation);
+        await File.WriteAllBytesAsync(patchPath, result, ct);
     }
 
-    private unsafe static byte[] Decode(byte[] source, byte[] patch, IProgress<ProgressInfo>? progress, CancellationToken cancellation)
+    private unsafe static byte[] Decode(byte[] source, byte[] patch, IProgress<ProgressInfo>? progress, CancellationToken ct)
     {
         if (patch.Length < 12)
             throw new InvalidDataException("BPS 패치 파일이 너무 짧습니다.");
@@ -59,7 +59,7 @@ public static class Bps
 
                 while (pos < patchEnd)
                 {
-                    cancellation.ThrowIfCancellationRequested();
+                    ct.ThrowIfCancellationRequested();
 
                     long data = ReadVli(pPat, ref pos, patchEnd);
                     int command = (int)(data & 3);
@@ -107,7 +107,7 @@ public static class Bps
         }
     }
 
-    private unsafe static byte[] Encode(byte[] source, byte[] target, IProgress<ProgressInfo>? progress, CancellationToken cancellation)
+    private unsafe static byte[] Encode(byte[] source, byte[] target, IProgress<ProgressInfo>? progress, CancellationToken ct)
     {
         using var ms = new MemoryStream();
 
@@ -122,7 +122,7 @@ public static class Bps
 
             while (outOffset < target.Length)
             {
-                cancellation.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 if (outOffset < source.Length && pSrc[outOffset] == pTar[outOffset])
                 {
@@ -141,7 +141,7 @@ public static class Bps
 
                     while (outOffset + runLen < target.Length && runLen < 0xFFFF)
                     {
-                        cancellation.ThrowIfCancellationRequested();
+                        ct.ThrowIfCancellationRequested();
 
                         if (outOffset + runLen < source.Length &&
                             pSrc[outOffset + runLen] == pTar[outOffset + runLen])

@@ -229,11 +229,11 @@ public class CertsMainViewModel : ToolTabViewModel
         }
     }
 
-    private bool ExtractCerts(CertsFileItem item, CancellationToken token)
+    private bool ExtractCerts(CertsFileItem item, CancellationToken ct = default)
     {
         try
         {
-            token.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             using var fs = new FileStream(item.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
@@ -252,7 +252,7 @@ public class CertsMainViewModel : ToolTabViewModel
 
             while (totalRead < CertSize)
             {
-                token.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 int read = fs.Read(buffer, totalRead, CertSize - totalRead);
 
@@ -270,7 +270,7 @@ public class CertsMainViewModel : ToolTabViewModel
                 return false;
             }
 
-            token.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             File.WriteAllBytes(OutputPath, buffer);
             AppendLog($"[성공] {totalRead:N0} bytes → {OutputFileName}");

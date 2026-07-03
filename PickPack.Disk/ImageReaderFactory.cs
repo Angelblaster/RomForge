@@ -4,12 +4,11 @@ namespace PickPack.Disk
 {
     public static class ImageReaderFactory
     {
-        public static IImageReaderHandler? GetHandler(string extension, long maxSegmentSize, CompressionLevel compressionLevel,
-            Action<long, long, string> rawProgressReporter, CancellationToken cancellationToken)
+        public static IImageReaderHandler? GetHandler(string extension, long maxSegmentSize, CompressionLevel compressionLevel, Action<long, long, string> rawProgressReporter, CancellationToken ct)
         {
             return extension.ToLowerInvariant() switch
             {
-                ".zip" => new ZipReadHandler(maxSegmentSize, compressionLevel, rawProgressReporter, cancellationToken),
+                ".zip" => new ZipReadHandler(maxSegmentSize, compressionLevel, rawProgressReporter, ct),
                 ".img" => new RawImageReadHandler(rawProgressReporter),
                 _ => null
             };

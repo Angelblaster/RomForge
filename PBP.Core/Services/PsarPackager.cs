@@ -4,7 +4,7 @@ namespace PBP.Core.Services;
 
 public static class PsarPackager
 {
-    public static void WritePsar(Stream outputStream, string mainGameTitle, string mainGameId, IReadOnlyList<DiscWriteInfo> discs, uint psarOffset, int compressionLevel, byte[]? config = null, Action<long, long>? onProgress = null, CancellationToken cancellationToken = default)
+    public static void WritePsar(Stream outputStream, string mainGameTitle, string mainGameId, IReadOnlyList<DiscWriteInfo> discs, uint psarOffset, int compressionLevel, byte[]? config = null, Action<long, long>? onProgress = null, CancellationToken ct = default)
     {
         var isoPositions = new uint[5];
         byte[] zeroBuffer = new byte[0x8000];
@@ -50,7 +50,7 @@ public static class PsarPackager
 
         for (var discNo = 0; discNo < discs.Count; discNo++)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             var disc = discs[discNo];
             var offset = (uint)outputStream.Position;
@@ -63,7 +63,7 @@ public static class PsarPackager
 
             isoPositions[discNo] = (uint)(outputStream.Position - psarOffset);
 
-            PsarDiscWriter.WriteDisc(outputStream, disc.IsoStream, disc.IsoLength, disc.GameId, disc.GameTitle, disc.TocData, config, psarOffset, isMulti, compressionLevel, cancellationToken, (cur, _) => onProgress?.Invoke(completedBytes + cur, totalBytes));
+            PsarDiscWriter.WriteDisc(outputStream, disc.IsoStream, disc.IsoLength, disc.GameId, disc.GameTitle, disc.TocData, config, psarOffset, isMulti, compressionLevel, (cur, _) => onProgress?.Invoke(completedBytes + cur, totalBytes), ct);
 
             completedBytes += disc.IsoLength;
         }

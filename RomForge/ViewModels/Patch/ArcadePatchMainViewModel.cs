@@ -389,22 +389,22 @@ public class ArcadePatchMainViewModel : ToolTabViewModel, IPatchViewModel
     private sealed record PatchMatchResult(string SourceFileName, string FullPath, PatchEntry? PatchEntry, string? PatchFileName, string? MismatchReason);
     private sealed record MatchPlan(List<PatchEntry> PatchEntries, List<PatchMatchResult> Results);
 
-    private static List<PatchPackage> BuildPatchPackages(string patchPath, CancellationToken token)
+    private static List<PatchPackage> BuildPatchPackages(string patchPath, CancellationToken ct = default)
     {
-        token.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         return [.. GetDatFiles(patchPath)
             .OrderBy(d => d.FileName)
             .Select(d =>
             {
-                token.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
                 return PatchPackageService.ParseDatFile(d.FileName, d.Content);
             })];
     }
 
-    private static MatchPlan BuildMatchPlan(string sourcePath, string patchPath, PatchPackage? package, CancellationToken token)
+    private static MatchPlan BuildMatchPlan(string sourcePath, string patchPath, PatchPackage? package, CancellationToken ct = default)
     {
-        token.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         var sourceEntries = GetSourceEntries(sourcePath);
         var patchEntries = GetPatchEntries(patchPath);
@@ -435,7 +435,7 @@ public class ArcadePatchMainViewModel : ToolTabViewModel, IPatchViewModel
 
         foreach (var (fileName, fullPath, crc) in sourceEntries)
         {
-            token.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             PatchEntry? matched = null;
             string? mismatchReason = null;

@@ -6,7 +6,7 @@ public class PbpUnpacker
 
     public Action<string>? OnNotify { get; set; }
 
-    public async Task UnpackAsync(string pbpPath, string outputDir, bool createCuesheet = true, CancellationToken cancellationToken = default)
+    public async Task UnpackAsync(string pbpPath, string outputDir, bool createCuesheet = true, CancellationToken ct = default)
     {
         using var stream = new FileStream(pbpPath, FileMode.Open, FileAccess.Read);
         var reader = new PbpReader(stream);
@@ -24,7 +24,7 @@ public class PbpUnpacker
         {
             foreach (var disc in reader.Discs)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 var capturedBase = baseSize;
 
@@ -42,8 +42,8 @@ public class PbpUnpacker
                 {
                     using var binStream = new FileStream(binPath, FileMode.Create, FileAccess.Write);
 
-                    disc.CopyTo(binStream, cancellationToken);
-                }, cancellationToken);
+                    disc.CopyTo(binStream, ct);
+                }, ct);
 
                 if (createCuesheet)
                 {

@@ -8,32 +8,32 @@ public static class Ips
     private static readonly byte[] PatchHeader = [(byte)'P', (byte)'A', (byte)'T', (byte)'C', (byte)'H'];
     private static readonly byte[] PatchFooter = [(byte)'E', (byte)'O', (byte)'F'];
 
-    public static async Task CreatePatchAsync(string sourcePath, string newPath, string patchPath, IProgress<ProgressInfo>? progress = null, CancellationToken cancellationToken = default)
+    public static async Task CreatePatchAsync(string sourcePath, string newPath, string patchPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         ValidateInputFiles(sourcePath, newPath);
 
-        byte[] original = await File.ReadAllBytesAsync(sourcePath, cancellationToken);
-        byte[] modified = await File.ReadAllBytesAsync(newPath, cancellationToken);
-        byte[] patch = await Task.Run(() => Encode(original, modified, progress, cancellationToken), cancellationToken);
+        byte[] original = await File.ReadAllBytesAsync(sourcePath, ct);
+        byte[] modified = await File.ReadAllBytesAsync(newPath, ct);
+        byte[] patch = await Task.Run(() => Encode(original, modified, progress, ct), ct);
 
-        await File.WriteAllBytesAsync(patchPath, patch, cancellationToken);
+        await File.WriteAllBytesAsync(patchPath, patch, ct);
     }
 
-    public static async Task ApplyPatchAsync(string sourcePath, string patchPath, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken cancellationToken = default)
+    public static async Task ApplyPatchAsync(string sourcePath, string patchPath, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         ValidateInputFiles(sourcePath, patchPath);
 
-        byte[] rom = await File.ReadAllBytesAsync(sourcePath, cancellationToken);
-        byte[] ips = await File.ReadAllBytesAsync(patchPath, cancellationToken);
-        byte[] result = await Task.Run(() => Decode(rom, ips, progress, cancellationToken), cancellationToken);
+        byte[] rom = await File.ReadAllBytesAsync(sourcePath, ct);
+        byte[] ips = await File.ReadAllBytesAsync(patchPath, ct);
+        byte[] result = await Task.Run(() => Decode(rom, ips, progress, ct), ct);
 
-        await File.WriteAllBytesAsync(outputPath, result, cancellationToken);
+        await File.WriteAllBytesAsync(outputPath, result, ct);
     }
 
-    public static Task<byte[]> ApplyPatchAsync(byte[] sourceData, byte[] patchData, IProgress<ProgressInfo>? progress = null, CancellationToken cancellationToken = default)
-        => Task.Run(() => Decode(sourceData, patchData, progress, cancellationToken), cancellationToken);
+    public static Task<byte[]> ApplyPatchAsync(byte[] sourceData, byte[] patchData, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
+        => Task.Run(() => Decode(sourceData, patchData, progress, ct), ct);
 
-    private unsafe static byte[] Encode(byte[] original, byte[] modified, IProgress<ProgressInfo>? progress,         CancellationToken cancellationToken)
+    private unsafe static byte[] Encode(byte[] original, byte[] modified, IProgress<ProgressInfo>? progress, CancellationToken ct)
     {
         using var ms = new MemoryStream();
         ms.Write(PatchHeader, 0, PatchHeader.Length);
@@ -46,7 +46,7 @@ public static class Ips
 
             while (pos < maxLen)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 byte orgByte = pos < original.Length ? pOrg[pos] : (byte)0;
                 byte modByte = pos < modified.Length ? pMod[pos] : (byte)0;
@@ -57,7 +57,7 @@ public static class Ips
 
                     while (pos < maxLen && (pos - start) < 0xFFFF)
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
+                        ct.ThrowIfCancellationRequested();
 
                         if ((pos < original.Length ? pOrg[pos] : (byte)0) == (pos < modified.Length ? pMod[pos] : (byte)0))
                             break;
@@ -73,7 +73,7 @@ public static class Ips
                     {
                         for (int j = start + 1; j < start + size; j++)
                         {
-                            cancellationToken.ThrowIfCancellationRequested();
+                            ct.ThrowIfCancellationRequested();
 
                             if ((j < modified.Length ? pMod[j] : (byte)0) != firstMod)
                             {
@@ -124,7 +124,7 @@ public static class Ips
         return ms.ToArray();
     }
 
-    private unsafe static byte[] Decode(byte[] rom, byte[] ips, IProgress<ProgressInfo>? progress, CancellationToken cancellationToken)
+    private unsafe static byte[] Decode(byte[] rom, byte[] ips, IProgress<ProgressInfo>? progress, CancellationToken ct)
     {
         if (ips.Length < 8)
             throw new InvalidDataException("IPS 파일이 너무 짧습니다.");
@@ -143,7 +143,7 @@ public static class Ips
 
             while (pos + 3 <= ips.Length)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 if (pIps[pos] == 'E' && pIps[pos + 1] == 'O' && pIps[pos + 2] == 'F')
                     break;

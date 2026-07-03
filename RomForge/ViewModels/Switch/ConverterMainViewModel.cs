@@ -197,7 +197,7 @@ public class ConverterMainViewModel : ToolTabViewModel
         }
     }
 
-    private static Task ConvertItemAsync(ConverterFileItem item, IProgress<ProgressInfo> progress, Action<string, LogLevel, string> log, CancellationToken ct)
+    private static Task ConvertItemAsync(ConverterFileItem item, IProgress<ProgressInfo>? progress = null, Action<string, LogLevel, string>? log = null, CancellationToken ct = default)
     {
         string source = item.Extension.ToLower();
         string target = item.SelectedTargetFormat.ToLower();

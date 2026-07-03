@@ -14,12 +14,12 @@
             };
         }
 
-        public async Task<(Stream stream, long length)> OpenStreamAsync(string url, CancellationToken cancellationToken)
+        public async Task<(Stream stream, long length)> OpenStreamAsync(string url, CancellationToken ct)
         {
             _progressCallback(0, "파일 정보 확인 중...", url);
 
             using var headRequest = new HttpRequestMessage(HttpMethod.Head, url);
-            var headResponse = await _httpClient.SendAsync(headRequest, cancellationToken);
+            var headResponse = await _httpClient.SendAsync(headRequest, ct);
 
             headResponse.EnsureSuccessStatusCode();
 
@@ -30,19 +30,19 @@
 
             _progressCallback(0, "다운로드 시작 중...", $"파일 크기: {contentLength.Value / (1024 * 1024)} MB");
 
-            var downloadStream = await CreateDownloadStreamAsync(url, contentLength.Value, cancellationToken);
+            var downloadStream = await CreateDownloadStreamAsync(url, contentLength.Value, ct);
 
             return (downloadStream, contentLength.Value);
         }
 
-        private async Task<Stream> CreateDownloadStreamAsync(string url, long contentLength, CancellationToken cancellationToken)
+        private async Task<Stream> CreateDownloadStreamAsync(string url, long contentLength, CancellationToken ct)
         {
             var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
             response.EnsureSuccessStatusCode();
 
-            var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var responseStream = await response.Content.ReadAsStreamAsync(ct);
             var progressStream = new ProgressTrackingStream(responseStream, contentLength, _progressCallback, response);
 
             return progressStream;
@@ -70,9 +70,9 @@
             set => throw new NotSupportedException();
         }
 
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct)
         {
-            int read = await baseStream.ReadAsync(buffer.AsMemory(offset, count), cancellationToken);
+            int read = await baseStream.ReadAsync(buffer.AsMemory(offset, count), ct);
 
             if (read > 0)
             {

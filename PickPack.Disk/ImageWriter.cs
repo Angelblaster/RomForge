@@ -40,17 +40,17 @@ namespace PickPack.Disk
         protected virtual void OnWriteEnded() => WriteEnded?.Invoke(this, EventArgs.Empty);
         #endregion
 
-        public async Task WriteImageAsync(string imagePath, int physicalDriveNumber, long diskSize, CancellationToken cancellationToken)
+        public async Task WriteImageAsync(string imagePath, int physicalDriveNumber, long diskSize, CancellationToken ct)
         {
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
-            _cancellationToken = cancellationToken;
-            _progressReporter.Initialize(cancellationToken);
+            _cancellationToken = ct;
+            _progressReporter.Initialize(ct);
 
-            await WriteImageAsyncInternal(imagePath, physicalDriveNumber, diskSize, cancellationToken);
+            await WriteImageAsyncInternal(imagePath, physicalDriveNumber, diskSize, ct);
             OnWriteEnded();
         }
 
-        private async Task WriteImageAsyncInternal(string imagePathOrUrl, int physicalDriveNumber, long diskSize, CancellationToken cancellationToken)
+        private async Task WriteImageAsyncInternal(string imagePathOrUrl, int physicalDriveNumber, long diskSize, CancellationToken ct)
         {
             if (!ImageWriterFactory.IsSupported(imagePathOrUrl))
             {
@@ -58,10 +58,10 @@ namespace PickPack.Disk
                 throw new NotSupportedException($"지원되지 않는 파일 형식입니다. 지원 형식: {supportedTypes}");
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             var handler = ImageWriterFactory.GetHandler(imagePathOrUrl, OnProgressChanged) ?? throw new InvalidOperationException("적절한 핸들러를 찾을 수 없습니다.");
-            var (sourceStream, sourceLength) = await handler.OpenStreamAsync(imagePathOrUrl, cancellationToken);
+            var (sourceStream, sourceLength) = await handler.OpenStreamAsync(imagePathOrUrl, ct);
 
             if (sourceLength > diskSize)
             {
@@ -73,10 +73,10 @@ namespace PickPack.Disk
             await PartitionUtil.DeleteAllPartitionsAsync(physicalDriveNumber);
             OnProgressChanged(0, "파티션 삭제 완료.");
 
-            await WriteToPhysicalDiskAsync(sourceStream, sourceLength, physicalDriveNumber, cancellationToken);
+            await WriteToPhysicalDiskAsync(sourceStream, sourceLength, physicalDriveNumber, ct);
         }
 
-        private async Task WriteToPhysicalDiskAsync(Stream sourceStream, long sourceLength, int physicalDriveNumber, CancellationToken cancellationToken)
+        private async Task WriteToPhysicalDiskAsync(Stream sourceStream, long sourceLength, int physicalDriveNumber, CancellationToken ct)
         {
             using (sourceStream)
             {
@@ -90,13 +90,13 @@ namespace PickPack.Disk
 
                 OnProgressChanged(5, "이미지 데이터 쓰는 중...");
 
-                await WriteDataWithProgress(sourceStream, stream, bytesToWrite, 0, bytesToWrite, sectorSize, cancellationToken);
+                await WriteDataWithProgress(sourceStream, stream, bytesToWrite, 0, bytesToWrite, sectorSize, ct);
 
                 _progressReporter.ReportCompletion($"{WorkTitle} 완료");
             }
         }
 
-        private async Task WriteDataWithProgress(Stream sourceStream, FileStream targetStream, long remainingBytes, long headerSize, long totalBytes, int sectorSize, CancellationToken cancellationToken)
+        private async Task WriteDataWithProgress(Stream sourceStream, FileStream targetStream, long remainingBytes, long headerSize, long totalBytes, int sectorSize, CancellationToken ct)
         {
             int sectorsPerBuffer = Math.Max(131072, sectorSize * 128);
             int bufferSize = sectorSize * sectorsPerBuffer;
@@ -108,14 +108,14 @@ namespace PickPack.Disk
                 SingleWriter = true
             });
 
-            var producerTask = ProduceDataAsync(sourceStream, channel.Writer, bufferSize, sectorSize, remainingBytes, cancellationToken);
-            var consumerTask = ConsumeDataAsync(channel.Reader, targetStream, remainingBytes, headerSize, totalBytes, cancellationToken);
+            var producerTask = ProduceDataAsync(sourceStream, channel.Writer, bufferSize, sectorSize, remainingBytes, ct);
+            var consumerTask = ConsumeDataAsync(channel.Reader, targetStream, remainingBytes, headerSize, totalBytes, ct);
 
             await producerTask;
             await consumerTask;
         }
 
-        private static async Task ProduceDataAsync(Stream fs, ChannelWriter<DataChunk> writer, int bufferSize, int sectorSize, long remainingBytes, CancellationToken cancellationToken)
+        private static async Task ProduceDataAsync(Stream fs, ChannelWriter<DataChunk> writer, int bufferSize, int sectorSize, long remainingBytes, CancellationToken ct)
         {
             byte[] buffer = Optimal.ArrayPool.Rent(bufferSize);
             long totalRead = 0;
@@ -124,14 +124,14 @@ namespace PickPack.Disk
             {
                 int read;
 
-                while (totalRead < remainingBytes && (read = await fs.ReadAsync(buffer.AsMemory(0, (int)Math.Min(bufferSize, remainingBytes - totalRead)), cancellationToken)) > 0)
+                while (totalRead < remainingBytes && (read = await fs.ReadAsync(buffer.AsMemory(0, (int)Math.Min(bufferSize, remainingBytes - totalRead)), ct)) > 0)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    ct.ThrowIfCancellationRequested();
                     totalRead += read;
 
                     if (read == bufferSize)
                     {
-                        await writer.WriteAsync(new DataChunk { Buffer = buffer, ValidLength = bufferSize }, cancellationToken);
+                        await writer.WriteAsync(new DataChunk { Buffer = buffer, ValidLength = bufferSize }, ct);
                         buffer = Optimal.ArrayPool.Rent(bufferSize);
                     }
                     else
@@ -142,7 +142,7 @@ namespace PickPack.Disk
                         byte[] dataToSend = Optimal.ArrayPool.Rent(totalSize);
                         Buffer.BlockCopy(buffer, 0, dataToSend, 0, read);
 
-                        await writer.WriteAsync(new DataChunk { Buffer = dataToSend, ValidLength = totalSize }, cancellationToken);
+                        await writer.WriteAsync(new DataChunk { Buffer = dataToSend, ValidLength = totalSize }, ct);
                     }
                 }
             }
@@ -153,19 +153,19 @@ namespace PickPack.Disk
             }
         }
 
-        private async Task ConsumeDataAsync(ChannelReader<DataChunk> reader, FileStream physicalDriveStream, long remainingBytes, long headerSize, long totalBytes, CancellationToken cancellationToken)
+        private async Task ConsumeDataAsync(ChannelReader<DataChunk> reader, FileStream physicalDriveStream, long remainingBytes, long headerSize, long totalBytes, CancellationToken ct)
         {
             long totalWritten = 0;
 
-            await foreach (var chunk in reader.ReadAllAsync(cancellationToken))
+            await foreach (var chunk in reader.ReadAllAsync(ct))
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 try
                 {
                     long bytesToWriteFromBuffer = Math.Min(chunk.ValidLength, remainingBytes - totalWritten);
 
-                    await physicalDriveStream.WriteAsync(chunk.Buffer.AsMemory(0, (int)bytesToWriteFromBuffer), cancellationToken);
+                    await physicalDriveStream.WriteAsync(chunk.Buffer.AsMemory(0, (int)bytesToWriteFromBuffer), ct);
                     totalWritten += bytesToWriteFromBuffer;
 
                     long overallWritten = headerSize + totalWritten;

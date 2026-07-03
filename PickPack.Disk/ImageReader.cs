@@ -44,13 +44,12 @@ namespace PickPack.Disk
 
         #endregion
 
-        public async Task ReadImageAsync(int physicalDriveNumber, string outputPath, long maxOutputSegmentSize64,
-            CompressionLevel compressionLevel, CancellationToken cancellationToken)
+        public async Task ReadImageAsync(int physicalDriveNumber, string outputPath, long maxOutputSegmentSize64, CompressionLevel compressionLevel, CancellationToken ct)
         {
             try
             {
-                _cancellationToken = cancellationToken;
-                _progressReporter.Initialize(cancellationToken);
+                _cancellationToken = ct;
+                _progressReporter.Initialize(ct);
 
                 string extension = Path.GetExtension(outputPath).ToLowerInvariant();
 
@@ -60,12 +59,12 @@ namespace PickPack.Disk
                 string physicalDrivePath = $@"\\.\PHYSICALDRIVE{physicalDriveNumber}";
                 long driveSize = DiskUtil.GetDiskLength(physicalDriveNumber);
                 using var driveStream = new FileStream(physicalDrivePath, FileMode.Open, FileAccess.Read, FileShare.None, Optimal.BufferSize, FileOptions.Asynchronous);
-                var handler = ImageReaderFactory.GetHandler(extension, maxOutputSegmentSize64, compressionLevel, _progressReporter.ReportProgress, cancellationToken)
+                var handler = ImageReaderFactory.GetHandler(extension, maxOutputSegmentSize64, compressionLevel, _progressReporter.ReportProgress, ct)
                     ?? throw new InvalidOperationException($"지원하지 않는 파일 형식입니다: {extension}");
 
-                await handler.WriteImageAsync(driveStream, outputPath, driveSize, cancellationToken);
+                await handler.WriteImageAsync(driveStream, outputPath, driveSize, ct);
 
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
                 
                 _progressReporter.ReportCompletion("이미지 저장 완료");
 

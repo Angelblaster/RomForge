@@ -128,19 +128,19 @@ public class NcchDecryptionStream : Stream
         return bytesRead;
     }
 
-    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct)
     {
         long currentPos = _position;
         int bytesRead;
 
         if (_baseStream is FileStream fs)
         {
-            bytesRead = await RandomAccess.ReadAsync(fs.SafeFileHandle, buffer.AsMemory(offset, count), _ncchOffset + currentPos, cancellationToken);
+            bytesRead = await RandomAccess.ReadAsync(fs.SafeFileHandle, buffer.AsMemory(offset, count), _ncchOffset + currentPos, ct);
         }
         else
         {
             lock (_baseStream) { _baseStream.Position = _ncchOffset + currentPos; }
-            bytesRead = await _baseStream.ReadAsync(buffer.AsMemory(offset, count), cancellationToken);
+            bytesRead = await _baseStream.ReadAsync(buffer.AsMemory(offset, count), ct);
         }
 
         if (bytesRead <= 0)
@@ -152,10 +152,10 @@ public class NcchDecryptionStream : Stream
         return bytesRead;
     }
 
-    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
     {
         byte[] array = new byte[buffer.Length];
-        int bytesRead = await ReadAsync(array, 0, array.Length, cancellationToken).ConfigureAwait(false);
+        int bytesRead = await ReadAsync(array, 0, array.Length, ct).ConfigureAwait(false);
 
         array.AsMemory(0, bytesRead).CopyTo(buffer);
 

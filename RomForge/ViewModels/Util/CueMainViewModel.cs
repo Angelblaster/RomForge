@@ -186,11 +186,11 @@ public class CueMainViewModel : ToolTabViewModel
         }
     }
 
-    private bool ProcessSingleFile(CueFileItem item, CancellationToken token)
+    private bool ProcessSingleFile(CueFileItem item, CancellationToken ct = default)
     {
         try
         {
-            token.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             string targetCuePath = Path.Combine(item.Directory, item.TargetName);
 
@@ -211,7 +211,7 @@ public class CueMainViewModel : ToolTabViewModel
             sb.AppendLine($"  TRACK 01 {trackMode}");
             sb.AppendLine("    INDEX 01 00:00:00");
 
-            token.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             File.WriteAllText(targetCuePath, sb.ToString(), Encoding.UTF8);
             AppendLog($"[성공] CUE 파일 생성 완료: {item.TargetName}");

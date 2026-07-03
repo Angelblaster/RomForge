@@ -7,16 +7,16 @@ namespace PickPack.Disk
 {
     public interface IImageReaderHandler
     {
-        Task WriteImageAsync(Stream sourceStream, string outputPath, long totalSize, CancellationToken cancellationToken);
+        Task WriteImageAsync(Stream sourceStream, string outputPath, long totalSize, CancellationToken ct);
     }
 
-    public class ZipReadHandler(long maxOutputSegmentSize, CompressionLevel compressionLevel, Action<long, long, string> progressReporter, CancellationToken cancellationToken) : IImageReaderHandler
+    public class ZipReadHandler(long maxOutputSegmentSize, CompressionLevel compressionLevel, Action<long, long, string> progressReporter, CancellationToken ct) : IImageReaderHandler
     {
         #region Constructor
 
         #endregion
 
-        public async Task WriteImageAsync(Stream sourceStream, string outputPath, long totalSize, CancellationToken cancellationToken)
+        public async Task WriteImageAsync(Stream sourceStream, string outputPath, long totalSize, CancellationToken ct)
         {
             using var zipFile = new ZipFile();
 
@@ -36,12 +36,12 @@ namespace PickPack.Disk
             zipFile.SaveProgress += (sender, e) => OnZipSaveProgress(e);
             zipFile.AddEntry(imgFileName, optimizedStream);
             
-            await Task.Run(() => zipFile.Save(outputPath), cancellationToken);
+            await Task.Run(() => zipFile.Save(outputPath), ct);
         }
 
         private void OnZipSaveProgress(SaveProgressEventArgs e)
         {            
-            if (cancellationToken.IsCancellationRequested)
+            if (ct.IsCancellationRequested)
                 e.Cancel = true;
             else
             {
@@ -144,21 +144,21 @@ namespace PickPack.Disk
 
         #endregion
 
-        public async Task WriteImageAsync(Stream sourceStream, string outputPath, long totalSize, CancellationToken cancellationToken)
+        public async Task WriteImageAsync(Stream sourceStream, string outputPath, long totalSize, CancellationToken ct)
         {
             var channel = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(Optimal.ChannelCapacity) 
             {
                 FullMode = BoundedChannelFullMode.Wait
             });
 
-            var producerTask = ProduceDataAsync(sourceStream, channel.Writer, totalSize, cancellationToken);
-            var consumerTask = ConsumeDataAsync(channel.Reader, outputPath, totalSize, cancellationToken);
+            var producerTask = ProduceDataAsync(sourceStream, channel.Writer, totalSize, ct);
+            var consumerTask = ConsumeDataAsync(channel.Reader, outputPath, totalSize, ct);
 
             await consumerTask;
             await producerTask;
         }
 
-        private static async Task ProduceDataAsync(Stream sourceStream, ChannelWriter<byte[]> writer, long totalSize, CancellationToken cancellationToken)
+        private static async Task ProduceDataAsync(Stream sourceStream, ChannelWriter<byte[]> writer, long totalSize, CancellationToken ct)
         {
             byte[] rentedBuffer = Optimal.ArrayPool.Rent(Optimal.BufferSize);
             long totalRead = 0;
@@ -167,13 +167,13 @@ namespace PickPack.Disk
             {
                 while (totalRead < totalSize)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    ct.ThrowIfCancellationRequested();
 
                     int read;
 
                     try
                     {
-                        read = await sourceStream.ReadAsync(rentedBuffer.AsMemory(0, Optimal.BufferSize), cancellationToken);
+                        read = await sourceStream.ReadAsync(rentedBuffer.AsMemory(0, Optimal.BufferSize), ct);
 
                         if (read == 0) 
                             break;
@@ -186,7 +186,7 @@ namespace PickPack.Disk
 
                     if (read == Optimal.BufferSize)
                     {
-                        await writer.WriteAsync(rentedBuffer, cancellationToken);
+                        await writer.WriteAsync(rentedBuffer, ct);
                         rentedBuffer = Optimal.ArrayPool.Rent(Optimal.BufferSize);
                     }
                     else
@@ -194,14 +194,14 @@ namespace PickPack.Disk
                         byte[] dataToSend = Optimal.ArrayPool.Rent(read);
                         Array.Copy(rentedBuffer, dataToSend, read);
 
-                        await writer.WriteAsync(dataToSend, cancellationToken);
+                        await writer.WriteAsync(dataToSend, ct);
                     }
 
                     totalRead += read;
                 }
 
                 if (totalSize > totalRead)
-                    await writer.WriteAsync([], cancellationToken);
+                    await writer.WriteAsync([], ct);
             }
             finally
             {
@@ -210,13 +210,13 @@ namespace PickPack.Disk
             }
         }
 
-        private async Task ConsumeDataAsync(ChannelReader<byte[]> reader, string outputPath, long totalSize, CancellationToken cancellationToken)
+        private async Task ConsumeDataAsync(ChannelReader<byte[]> reader, string outputPath, long totalSize, CancellationToken ct)
         {
             long totalWritten = 0;
             long zeroBytesWritten = 0;
             using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None, Optimal.BufferSize, FileOptions.Asynchronous);
 
-            await foreach (var buffer in reader.ReadAllAsync(cancellationToken))
+            await foreach (var buffer in reader.ReadAllAsync(ct))
             {
                 try
                 {
@@ -228,7 +228,7 @@ namespace PickPack.Disk
                         {
                             int writeCount = (int)Math.Min(Optimal.BufferSize, bytesRemaining);
 
-                            await outStream.WriteAsync(Optimal.ZeroBuffer.AsMemory(0, writeCount), cancellationToken);
+                            await outStream.WriteAsync(Optimal.ZeroBuffer.AsMemory(0, writeCount), ct);
 
                             bytesRemaining -= writeCount;
                             zeroBytesWritten += writeCount;
@@ -237,7 +237,7 @@ namespace PickPack.Disk
                     }
                     else
                     {
-                        await outStream.WriteAsync(buffer, cancellationToken);
+                        await outStream.WriteAsync(buffer, ct);
 
                         totalWritten += buffer.Length;
                         progressReporter(totalWritten, totalSize, "이미지 저장 중...");

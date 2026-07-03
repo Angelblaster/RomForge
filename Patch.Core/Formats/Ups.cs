@@ -6,32 +6,32 @@ public static class Ups
 {
     private static readonly byte[] HeaderBytes = [(byte)'U', (byte)'P', (byte)'S', (byte)'1'];
 
-    public static async Task ApplyPatchAsync(string sourcePath, string patchPath, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken cancellationToken = default)
+    public static async Task ApplyPatchAsync(string sourcePath, string patchPath, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         ValidateInputFiles(sourcePath, patchPath);
 
-        byte[] input = await File.ReadAllBytesAsync(sourcePath, cancellationToken);
-        byte[] patch = await File.ReadAllBytesAsync(patchPath, cancellationToken);
-        byte[] result = await Task.Run(() => Decode(input, patch, progress, cancellationToken), cancellationToken);
+        byte[] input = await File.ReadAllBytesAsync(sourcePath, ct);
+        byte[] patch = await File.ReadAllBytesAsync(patchPath, ct);
+        byte[] result = await Task.Run(() => Decode(input, patch, progress, ct), ct);
 
-        await File.WriteAllBytesAsync(outputPath, result, cancellationToken);
+        await File.WriteAllBytesAsync(outputPath, result, ct);
     }
 
-    public static Task<byte[]> ApplyPatchAsync(byte[] sourceData, byte[] patchData, IProgress<ProgressInfo>? progress = null, CancellationToken cancellationToken = default)
-        => Task.Run(() => Decode(sourceData, patchData, progress, cancellationToken), cancellationToken);
+    public static Task<byte[]> ApplyPatchAsync(byte[] sourceData, byte[] patchData, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
+        => Task.Run(() => Decode(sourceData, patchData, progress, ct), ct);
 
-    public static async Task CreatePatchAsync(string sourcePath, string newPath, string patchPath, IProgress<ProgressInfo>? progress = null, CancellationToken cancellationToken = default)
+    public static async Task CreatePatchAsync(string sourcePath, string newPath, string patchPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         ValidateInputFiles(sourcePath, newPath);
 
-        byte[] source = await File.ReadAllBytesAsync(sourcePath, cancellationToken);
-        byte[] target = await File.ReadAllBytesAsync(newPath, cancellationToken);
-        byte[] patch = await Task.Run(() => Encode(source, target, progress, cancellationToken), cancellationToken);
+        byte[] source = await File.ReadAllBytesAsync(sourcePath, ct);
+        byte[] target = await File.ReadAllBytesAsync(newPath, ct);
+        byte[] patch = await Task.Run(() => Encode(source, target, progress, ct), ct);
 
-        await File.WriteAllBytesAsync(patchPath, patch, cancellationToken);
+        await File.WriteAllBytesAsync(patchPath, patch, ct);
     }
 
-    private unsafe static byte[] Decode(byte[] input, byte[] patch, IProgress<ProgressInfo>? progress, CancellationToken cancellationToken)
+    private unsafe static byte[] Decode(byte[] input, byte[] patch, IProgress<ProgressInfo>? progress, CancellationToken ct)
     {
         if (patch.Length < 12) throw new InvalidDataException("UPS 패치 파일이 너무 짧습니다.");
 
@@ -54,14 +54,14 @@ public static class Ups
 
                 while (pos < patchEnd)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    ct.ThrowIfCancellationRequested();
 
                     long skip = ReadVli(pPat, ref pos, patchEnd);
                     outOffset += skip;
 
                     while (pos < patchEnd)
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
+                        ct.ThrowIfCancellationRequested();
 
                         byte b = pPat[pos++];
                         if (b == 0) break;
@@ -94,7 +94,7 @@ public static class Ups
         }
     }
 
-    private unsafe static byte[] Encode(byte[] source, byte[] target, IProgress<ProgressInfo>? progress, CancellationToken cancellationToken)
+    private unsafe static byte[] Encode(byte[] source, byte[] target, IProgress<ProgressInfo>? progress, CancellationToken ct)
     {
         using var ms = new MemoryStream();
 
@@ -111,7 +111,7 @@ public static class Ups
 
             while (i < maxLen)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 byte s = i < source.Length ? pSrc[i] : (byte)0;
                 byte t = i < target.Length ? pTar[i] : (byte)0;
@@ -124,7 +124,7 @@ public static class Ups
 
                     while (i < maxLen)
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
+                        ct.ThrowIfCancellationRequested();
 
                         if ((i < source.Length ? pSrc[i] : (byte)0) == (i < target.Length ? pTar[i] : (byte)0))
                             break;

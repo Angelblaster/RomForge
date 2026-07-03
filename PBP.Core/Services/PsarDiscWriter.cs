@@ -9,9 +9,9 @@ public static class PsarDiscWriter
     private const int BlockSize = 0x9300;
     private const int BufferSize = 1048576;
 
-    public static void WriteDisc(Stream outputStream, Stream isoStream, long isoLength, string gameId, string gameTitle, byte[] tocData, byte[]? configData, uint psarOffset, bool isMultiDisc, int compressionLevel, CancellationToken cancellationToken, Action<long, long>? onProgress = null)
+    public static void WriteDisc(Stream outputStream, Stream isoStream, long isoLength, string gameId, string gameTitle, byte[] tocData, byte[]? configData, uint psarOffset, bool isMultiDisc, int compressionLevel, Action<long, long>? onProgress = null, CancellationToken ct = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         var isoPosition = (uint)(outputStream.Position - psarOffset);
         var actualIsoSize = (uint)isoLength;
@@ -66,7 +66,7 @@ public static class PsarDiscWriter
 
         for (var i = 0; i < isoSize / BlockSize; i++)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
             outputStream.WriteUInt32(offset, 1);
             outputStream.WriteUInt32(x, 1);
@@ -90,7 +90,7 @@ public static class PsarDiscWriter
 
             while ((bytesRead = isoStream.Read(buffer, 0, BufferSize)) > 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 outputStream.Write(buffer, 0, bytesRead);
                 totSize += (uint)bytesRead;
@@ -115,7 +115,7 @@ public static class PsarDiscWriter
 
             while ((bytesRead = isoStream.Read(readBuffer, 0, BlockSize)) > 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 totSize += (uint)bytesRead;
                 curSize += (uint)bytesRead;

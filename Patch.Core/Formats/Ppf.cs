@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
+using Common;
 
 namespace Patch.Core.Formats;
 
@@ -8,230 +10,288 @@ public static class Ppf
     private const int DescriptionOffset = 6;
     private const int DescriptionLength = 50;
 
-    public static async Task ApplyPatchAsync(string sourcePath, string patchPath, string outputPath, Action<double>? onProgress = null, CancellationToken ct = default)
+    public static async Task ApplyPatchAsync(string sourcePath, string patchPath, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         ValidateInputFiles(sourcePath, patchPath);
 
-        byte[] source = await File.ReadAllBytesAsync(sourcePath, ct);
-        byte[] patch = await File.ReadAllBytesAsync(patchPath, ct);
-        byte[] result = await Task.Run(() => Decode(source, patch, onProgress, ct), ct);
+        await Task.Run(() =>
+        {
+            using var srcStream = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var patStream = new FileStream(patchPath, FileMode.Open, FileAccess.Read);
+            using var outStream = new FileStream(outputPath, FileMode.Create, FileAccess.ReadWrite);
 
-        await File.WriteAllBytesAsync(outputPath, result, ct);
+            DecodeStreamInternal(srcStream, patStream, outStream, progress, ct);
+        }, ct).ConfigureAwait(false);
     }
 
-    public static async Task<byte[]> ApplyPatchAsync(byte[] sourceData, byte[] patchData, Action<double>? onProgress = null, CancellationToken ct = default)
+    public static async Task<byte[]> ApplyPatchAsync(byte[] sourceData, byte[] patchData, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
-        return await Task.Run(() => Decode(sourceData, patchData, onProgress, ct), ct);
+        return await Task.Run(() =>
+        {
+            using var srcStream = new MemoryStream(sourceData);
+            using var patStream = new MemoryStream(patchData);
+            using var outStream = new MemoryStream();
+
+            DecodeStreamInternal(srcStream, patStream, outStream, progress, ct);
+            return outStream.ToArray();
+        }, ct).ConfigureAwait(false);
     }
 
-    public static async Task CreatePatchAsync(string sourcePath, string newPath, string patchPath, Action<double>? onProgress = null, string description = "", bool enableBlockcheck = true, CancellationToken ct = default)
+    public static async Task CreatePatchAsync(string sourcePath, string newPath, string patchPath, IProgress<ProgressInfo>? progress = null, string description = "", bool enableBlockcheck = true, CancellationToken ct = default)
     {
         ValidateInputFiles(sourcePath, newPath);
 
-        byte[] source = await File.ReadAllBytesAsync(sourcePath, ct);
-        byte[] target = await File.ReadAllBytesAsync(newPath, ct);
-        byte[] result = await Task.Run(() => Encode(source, target, onProgress, description, enableBlockcheck, ct), ct);
+        await Task.Run(() =>
+        {
+            using var srcStream = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var tarStream = new FileStream(newPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var patStream = new FileStream(patchPath, FileMode.Create, FileAccess.Write);
 
-        await File.WriteAllBytesAsync(patchPath, result, ct);
+            EncodeStreamInternal(srcStream, tarStream, patStream, progress, description, enableBlockcheck, ct);
+        }, ct).ConfigureAwait(false);
     }
 
-    private unsafe static byte[] Decode(byte[] source, byte[] patch, Action<double>? onProgress, CancellationToken ct)
+    private static void DecodeStreamInternal(Stream src, Stream pat, Stream outStream, IProgress<ProgressInfo>? progress, CancellationToken ct)
     {
-        if (patch.Length < 56) 
+        if (pat.Length < 56)
             throw new InvalidDataException("PPF 파일이 너무 짧습니다.");
 
-        fixed (byte* pPat = patch)
+        byte[] header = new byte[60];
+        pat.ReadExactly(header, 0, 60);
+
+        if (header[0] != 'P' || header[1] != 'P' || header[2] != 'F')
+            throw new InvalidDataException("유효하지 않은 PPF 헤더입니다.");
+
+        byte version = (byte)(header[3] - '0');
+        if (version < 1 || version > 3)
+            throw new InvalidDataException($"지원하지 않는 PPF 버전입니다: PPF {version}.0");
+
+        long dataEnd = pat.Length;
+        bool isUndoAvailable = false;
+
+        if (version >= 2 && pat.Length > 10)
         {
-            if (pPat[0] != 'P' || pPat[1] != 'P' || pPat[2] != 'F')
-                throw new InvalidDataException("유효하지 않은 PPF 헤더입니다.");
-
-            byte version = (byte)(pPat[3] - '0');
-
-            if (version < 1 || version > 3) 
-                throw new InvalidDataException($"지원하지 않는 PPF 버전입니다: PPF {version}.0");
-
-            byte[] output = new byte[source.Length];
-
-            Buffer.BlockCopy(source, 0, output, 0, source.Length);
-
-            int dataEnd = patch.Length;
-            bool isUndoAvailable = false;
-
-            if (version >= 2 && patch.Length > 10)
+            int lenIdx = version == 2 ? 4 : 2;
+            if (pat.Length > lenIdx + 4)
             {
-                int lenIdx = version == 2 ? 4 : 2;
+                pat.Position = pat.Length - lenIdx - 4;
+                byte[] tail = new byte[4];
+                pat.ReadExactly(tail, 0, 4);
 
-                if (patch.Length > lenIdx + 4)
+                if (tail[0] == '.' && tail[1] == 'D' && tail[2] == 'I' && tail[3] == 'Z')
                 {
-                    byte* tail = pPat + patch.Length - lenIdx - 4;
-
-                    if (tail[0] == '.' && tail[1] == 'D' && tail[2] == 'I' && tail[3] == 'Z')
-                    {
-                        int idLen = version == 2 ? *(int*)(pPat + patch.Length - 4) : *(ushort*)(pPat + patch.Length - 2);
-
-                        dataEnd -= version == 2 ? idLen + 38 : idLen + 36;
-                    }
+                    pat.Position = pat.Length - lenIdx;
+                    byte[] lenBuf = new byte[lenIdx];
+                    pat.ReadExactly(lenBuf, 0, lenIdx);
+                    int idLen = version == 2 ? BitConverter.ToInt32(lenBuf, 0) : BitConverter.ToUInt16(lenBuf, 0);
+                    dataEnd -= version == 2 ? idLen + 38 : idLen + 36;
                 }
             }
-
-            int pos = 0;
-
-            if (version == 1)
-                pos = 56;
-            else if (version == 2)
-            {
-                ValidateBlockcheck(pPat, patch, source, 0, 60, 2);
-
-                pos = 1084;
-            }
-            else
-            {
-                byte blockcheck = pPat[57];
-
-                isUndoAvailable = pPat[58] == 1;
-
-                byte imagetype = pPat[56];
-
-                if (blockcheck != 0)
-                {
-                    ValidateBlockcheck(pPat, patch, source, imagetype, 60, 3);
-
-                    pos = 1084;
-                }
-                else pos = 60;
-            }
-
-            int patchDataLen = Math.Max(1, dataEnd - pos);
-
-            fixed (byte* pOut = output)
-            {
-                while (pos < dataEnd)
-                {
-                    ct.ThrowIfCancellationRequested();
-
-                    long offset = (version == 3) ? (*(long*)(pPat + pos)) : (*(uint*)(pPat + pos));
-
-                    pos += (version == 3) ? 8 : 4;
-
-                    byte length = pPat[pos++];
-
-                    if (length == 0 || pos + length > dataEnd)
-                        break;
-
-                    if (offset >= 0 && offset + length <= output.Length) 
-                        Buffer.MemoryCopy(pPat + pos, pOut + offset, output.Length - offset, length);
-
-                    pos += length;
-
-                    if (version == 3 && isUndoAvailable) 
-                        pos += length;
-
-                    onProgress?.Invoke((double)(pos - (dataEnd - patchDataLen)) / patchDataLen);
-                }
-            }
-
-            onProgress?.Invoke(1.0);
-
-            return output;
         }
+
+        long pos = 60;
+        if (version == 1)
+        {
+            pos = 56;
+            pat.Position = pos;
+        }
+        else if (version == 2)
+        {
+            ValidateBlockcheckInternal(header, pat, src, 0, 2);
+            pos = 1084;
+            pat.Position = pos;
+        }
+        else
+        {
+            byte blockcheck = header[57];
+            isUndoAvailable = header[58] == 1;
+            byte imagetype = header[56];
+
+            if (blockcheck != 0)
+            {
+                ValidateBlockcheckInternal(header, pat, src, imagetype, 3);
+                pos = 1084;
+                pat.Position = pos;
+            }
+        }
+
+        long totalSize = src.Length;
+        var reporter = new ProgressReporter("패치중...", string.Empty, totalSize, progress);
+        Action<long, long>? report = reporter.CreateAction();
+        long nextReport = Environment.TickCount64 + 100;
+
+        src.Position = 0;
+        outStream.Position = 0;
+        byte[] ioBuffer = new byte[64 * 1024];
+        long totalCopied = 0;
+
+        while (totalCopied < totalSize)
+        {
+            ct.ThrowIfCancellationRequested();
+            int read = src.Read(ioBuffer, 0, (int)Math.Min(ioBuffer.Length, totalSize - totalCopied));
+            if (read == 0) break;
+
+            outStream.Write(ioBuffer, 0, read);
+            totalCopied += read;
+
+            long now = Environment.TickCount64;
+            if (now >= nextReport)
+            {
+                nextReport = now + 100;
+                report?.Invoke(totalCopied, totalSize);
+            }
+        }
+
+        byte[] buffer = new byte[256];
+        while (pat.Position < dataEnd)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            long offset = version == 3 ? BitConverter.ToInt64(ReadBytes(pat, 8), 0) : BitConverter.ToUInt32(ReadBytes(pat, 4), 0);
+            int length = pat.ReadByte();
+            if (length <= 0 || pat.Position + length > dataEnd) 
+                break;
+
+            pat.ReadExactly(buffer, 0, length);
+
+            if (offset >= 0 && offset + length <= outStream.Length)
+            {
+                outStream.Position = offset;
+                outStream.Write(buffer, 0, length);
+            }
+
+            if (version == 3 && isUndoAvailable)
+                pat.Position += length;
+        }
+
+        report?.Invoke(totalSize, totalSize);
     }
 
-    private unsafe static byte[] Encode(byte[] source, byte[] target, Action<double>? onProgress, string description, bool enableBlockcheck, CancellationToken ct)
+    private static byte[] ReadBytes(Stream stream, int count)
     {
-        using var ms = new MemoryStream();
-        byte[] header = new byte[60];
+        byte[] buffer = new byte[count];
+        stream.ReadExactly(buffer, 0, count);
+        return buffer;
+    }
 
+    private static void EncodeStreamInternal(Stream src, Stream tar, Stream pat, IProgress<ProgressInfo>? progress, string description, bool enableBlockcheck, CancellationToken ct)
+    {
+        byte[] header = new byte[60];
         HeaderMagic30.CopyTo(header, 0);
         header[5] = 0x02;
 
         byte[] descBytes = Encoding.ASCII.GetBytes(description);
-
         Array.Copy(descBytes, 0, header, DescriptionOffset, Math.Min(descBytes.Length, DescriptionLength));
 
         header[57] = (byte)(enableBlockcheck ? 1 : 0);
-        ms.Write(header, 0, header.Length);
+        pat.Write(header, 0, header.Length);
 
         if (enableBlockcheck)
         {
             const long blockStart = 0x9320L;
-
-            if (source.Length < blockStart + 1024)
+            if (src.Length < blockStart + 1024)
                 throw new InvalidDataException("소스 파일이 너무 짧아 blockcheck를 생성할 수 없습니다.");
 
-            ms.Write(source, (int)blockStart, 1024);
+            src.Position = blockStart;
+            byte[] blockBuf = new byte[1024];
+            src.ReadExactly(blockBuf, 0, 1024);
+            pat.Write(blockBuf, 0, 1024);
         }
 
-        int maxLen = Math.Max(source.Length, target.Length);
+        long maxLen = Math.Max(src.Length, tar.Length);
+        Action<long, long>? report = null;
 
-        fixed (byte* pSrc = source, pTar = target)
+        if (progress is not null)
         {
-            int i = 0;
+            var reporter = new ProgressReporter("패치 생성중...", string.Empty, maxLen, progress);
+            report = reporter.CreateAction();
+        }
 
-            while (i < maxLen)
+        long nextReport = Environment.TickCount64 + 100;
+        src.Position = 0;
+        tar.Position = 0;
+
+        byte[] srcBuf = new byte[4096];
+        byte[] tarBuf = new byte[4096];
+        long currentPos = 0;
+
+        while (currentPos < maxLen)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            int bytesReadSrc = src.Read(srcBuf, 0, srcBuf.Length);
+            int bytesReadTar = tar.Read(tarBuf, 0, tarBuf.Length);
+            int validLen = Math.Max(bytesReadSrc, bytesReadTar);
+
+            if (validLen == 0) 
+                break;
+
+            for (int i = 0; i < validLen; i++)
             {
-                ct.ThrowIfCancellationRequested();
-
-                byte s = i < source.Length ? pSrc[i] : (byte)0;
-                byte t = i < target.Length ? pTar[i] : (byte)0;
+                byte s = i < bytesReadSrc ? srcBuf[i] : (byte)0;
+                byte t = i < bytesReadTar ? tarBuf[i] : (byte)0;
 
                 if (s != t)
                 {
-                    int start = i;
-                    byte k = 0;
+                    long startOffset = currentPos + i;
+                    List<byte> diffBytes = [];
 
-                    do { k++; i++; } 
-                    while (i < maxLen && (i < target.Length ? pTar[i] : (byte)0) != (i < source.Length ? pSrc[i] : (byte)0) && k != 0xff);
+                    while (i < validLen && diffBytes.Count < 255)
+                    {
+                        byte currS = i < bytesReadSrc ? srcBuf[i] : (byte)0;
+                        byte currT = i < bytesReadTar ? tarBuf[i] : (byte)0;
 
-                    if (k == 0xff)
-                        i--;
+                        if (currS == currT) 
+                            break;
 
-                    ms.Write(BitConverter.GetBytes((long)start), 0, 8);
-                    ms.WriteByte(k);
+                        diffBytes.Add(currT);
+                        i++;
+                    }
 
-                    int safeLen = Math.Max(0, Math.Min(k, target.Length - start));
-
-                    if (safeLen > 0) 
-                        ms.Write(target, start, safeLen);
-
-                    if (safeLen < k) 
-                        ms.Write(new byte[k - safeLen], 0, k - safeLen);
+                    byte[] offsetBytes = BitConverter.GetBytes(startOffset);
+                    pat.Write(offsetBytes, 0, offsetBytes.Length);
+                    pat.WriteByte((byte)diffBytes.Count);
+                    pat.WriteAsync([.. diffBytes], 0, diffBytes.Count, ct).ConfigureAwait(false);
+                    i--;
                 }
-                else
-                    i++;
+            }
 
-                onProgress?.Invoke((double)i / maxLen);
+            currentPos += validLen;
+
+            long now = Environment.TickCount64;
+            if (now >= nextReport)
+            {
+                nextReport = now + 100;
+                report?.Invoke(currentPos, maxLen);
             }
         }
 
-        onProgress?.Invoke(1.0);
-
-        return ms.ToArray();
+        report?.Invoke(maxLen, maxLen);
     }
 
-    private unsafe static void ValidateBlockcheck(byte* pPat, byte[] patch, byte[] source, byte imagetype, int headerBlockOffset, int version)
+    private static void ValidateBlockcheckInternal(byte[] header, Stream pat, Stream src, byte imagetype, int version)
     {
-        if (patch.Length < headerBlockOffset + 1024) 
-            throw new InvalidDataException("PPF 파일이 손상되었습니다.");
-
         long sourceBlockStart = imagetype != 0 ? 0x80A0L : 0x9320L;
-
-        if (source.Length < sourceBlockStart + 1024) 
+        if (src.Length < sourceBlockStart + 1024)
             throw new InvalidDataException("소스 파일이 너무 짧아 blockcheck를 수행할 수 없습니다.");
 
-        fixed (byte* pSrc = source)
-        {
-            byte* patchBlock = pPat + headerBlockOffset;
-            byte* sourceBlock = pSrc + sourceBlockStart;
+        byte[] patchBlock = new byte[1024];
+        pat.Position = 60;
+        pat.ReadExactly(patchBlock, 0, 1024);
 
-            for (int i = 0; i < 1024; i++)
-                if (patchBlock[i] != sourceBlock[i]) 
-                    throw new InvalidDataException($"Blockcheck 실패 (PPF {version}.0)");
-        }
+        byte[] sourceBlock = new byte[1024];
+        src.Position = sourceBlockStart;
+        src.ReadExactly(sourceBlock, 0, 1024);
+
+        for (int i = 0; i < 1024; i++)
+            if (patchBlock[i] != sourceBlock[i])
+                throw new InvalidDataException($"Blockcheck 실패 (PPF {version}.0)");
     }
 
     private static void ValidateInputFiles(params string[] paths)
     {
-        foreach (var path in paths) if (!File.Exists(path)) 
-            throw new FileNotFoundException($"파일을 찾을 수 없습니다: {path}");
+        foreach (var path in paths)
+            if (!File.Exists(path))
+                throw new FileNotFoundException($"파일을 찾을 수 없습니다: {path}");
     }
 }

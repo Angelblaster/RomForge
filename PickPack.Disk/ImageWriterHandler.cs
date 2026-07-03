@@ -5,12 +5,12 @@ namespace PickPack.Disk
 {
     public interface IImageWriteHandler
     {
-        Task<(Stream stream, long length)> OpenStreamAsync(string imagePath, CancellationToken cancellationToken);
+        Task<(Stream stream, long length)> OpenStreamAsync(string imagePath, CancellationToken ct);
     }
 
     public class ZipWriteHandler : IImageWriteHandler
     {
-        public async Task<(Stream stream, long length)> OpenStreamAsync(string imagePath, CancellationToken cancellationToken)
+        public async Task<(Stream stream, long length)> OpenStreamAsync(string imagePath, CancellationToken ct)
         {
             await Task.Yield();
 
@@ -34,22 +34,22 @@ namespace PickPack.Disk
 
     public class GzipWriteHandler(Action<int, string, string?> progressCallback) : IImageWriteHandler
     {
-        public async Task<(Stream stream, long length)> OpenStreamAsync(string imagePath, CancellationToken cancellationToken)
+        public async Task<(Stream stream, long length)> OpenStreamAsync(string imagePath, CancellationToken ct)
         {
             progressCallback(0, "파일 크기 계산 중...", string.Empty);
 
-            long sourceLength = await GetGzUncompressedSizeAsync(imagePath, cancellationToken);
+            long sourceLength = await GetGzUncompressedSizeAsync(imagePath, ct);
             var compressedStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read, Optimal.BufferSize * 2, FileOptions.SequentialScan);
             var gzStream = new GZipInputStream(compressedStream);
 
             return (gzStream, sourceLength);
         }
 
-        private async Task<long> GetGzUncompressedSizeAsync(string imagePath, CancellationToken cancellationToken)
+        private async Task<long> GetGzUncompressedSizeAsync(string imagePath, CancellationToken ct)
         {
             var sizeProgressReporter = new ProgressReporter();
 
-            sizeProgressReporter.Initialize(cancellationToken);
+            sizeProgressReporter.Initialize(ct);
             sizeProgressReporter.ProgressChanged += (sender, args) => progressCallback(args.Percent, args.Message1, args.Message2);
 
             long totalReadBytes = 0;
@@ -64,9 +64,9 @@ namespace PickPack.Disk
                 using var gzStream = new GZipInputStream(compressedStream);
                 int readBytes;
 
-                while ((readBytes = await gzStream.ReadAsync(buffer, cancellationToken)) > 0)
+                while ((readBytes = await gzStream.ReadAsync(buffer, ct)) > 0)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    ct.ThrowIfCancellationRequested();
                     totalReadBytes += readBytes;
                     sizeProgressReporter.ReportProgressWithInterval(compressedStream.Position, compressedFileSize, "이미지 크기 확인 중...", 1.0);
                 }
@@ -82,7 +82,7 @@ namespace PickPack.Disk
 
     public class ImgWriteHandler : IImageWriteHandler
     {
-        public async Task<(Stream stream, long length)> OpenStreamAsync(string imagePath, CancellationToken cancellationToken)
+        public async Task<(Stream stream, long length)> OpenStreamAsync(string imagePath, CancellationToken ct)
         {
             await Task.Yield();
 
