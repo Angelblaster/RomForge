@@ -1,6 +1,7 @@
 ﻿using CHD.Core.Services;
 using Common;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace RomForge.Core.Services.Patch;
 
@@ -41,9 +42,26 @@ public class BinTrackCopier(Action<string, LogLevel> log)
             }
         }
 
-        string outputCuePath = Path.Combine(outputDir, Path.GetFileName(cuePath));
-        File.Copy(cuePath, outputCuePath, true);
+        string newBinFileName = Path.GetFileName(outputPath);
+        string outputCuePath = Path.Combine(outputDir, Path.ChangeExtension(newBinFileName, ".cue"));
 
-        return outputCuePath;
+        try
+        {
+            string cueContent = await File.ReadAllTextAsync(cuePath).ConfigureAwait(false);
+            string updatedCueContent = Regex.Replace(
+                cueContent,
+                @"FILE\s+""([^""]+)""\s+BINARY",
+                $"FILE \"{newBinFileName}\" BINARY",
+                RegexOptions.IgnoreCase
+            );
+
+            await File.WriteAllTextAsync(outputCuePath, updatedCueContent).ConfigureAwait(false);
+            return outputCuePath;
+        }
+        catch (Exception ex)
+        {
+            log($"CUE 파일 처리 중 오류 발생: {ex.Message}", LogLevel.Error);
+            return null;
+        }
     }
 }

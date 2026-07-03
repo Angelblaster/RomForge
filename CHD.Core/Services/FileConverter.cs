@@ -13,7 +13,7 @@ public class FileConverter : IDisposable
 
     public string CurrentOutputPath { get; private set; }
 
-    public event EventHandler<ProgressEventArgs> ProgressChanged;
+    public event EventHandler<ProgressInfo> ProgressChanged;
     public event EventHandler<(string Message, LogLevel Level)> LogMessage;
 
     private static readonly Regex TrackMode1Regex = new(@"^TRACK\s+\d+\s+MODE1", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -85,7 +85,7 @@ public class FileConverter : IDisposable
 
                 CurrentOutputPath = null;
 
-                ProgressChanged?.Invoke(this, new ProgressEventArgs(100));
+                ProgressChanged?.Invoke(this, new ProgressInfo { Label = "추출 완료", Percent = 100 });
 
                 return new ConversionResult
                 {
@@ -124,7 +124,7 @@ public class FileConverter : IDisposable
 
                 var result = extractedBins.Count == 1 && IsSingleTrackMode1(cuePath) ? ProduceSingleTrackIso(cuePath, extractedBins[0]) : ProduceMultiTrackBinCue(cuePath, extractedBins);
 
-                ProgressChanged?.Invoke(this, new ProgressEventArgs(100));
+                ProgressChanged?.Invoke(this, new ProgressInfo { Label = "추출 완료", Percent = 100 });
 
                 return result;
             }
@@ -264,7 +264,7 @@ public class FileConverter : IDisposable
                 VerificationPerformed = true
             };
 
-            ProgressChanged?.Invoke(this, new ProgressEventArgs(100));
+            ProgressChanged?.Invoke(this, new ProgressInfo { Label = "압축 완료", Percent = 100 });
 
             return result;
         }
@@ -313,7 +313,7 @@ public class FileConverter : IDisposable
             Log($"압축률: {Utils.FormatFileSize(originalSize)} → {Utils.FormatFileSize(compressedSize)} ({ratio:F1}%)", LogLevel.Highlight);
             Log($"압축 완료: {chdPath}", LogLevel.Ok);
 
-            ProgressChanged?.Invoke(this, new ProgressEventArgs(100));
+            ProgressChanged?.Invoke(this, new ProgressInfo { Label = "압축 완료", Percent = 100 });
 
             return new ConversionResult
             {

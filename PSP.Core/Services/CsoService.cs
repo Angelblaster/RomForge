@@ -222,7 +222,7 @@ public class CsoService
     public async Task ExtractChdToIsoAsync(string chdPath, string isoPath, IProgress<double>? progress = null, CancellationToken ct = default)
     {
         if (progress != null)
-            _chdman.ProgressChanged += (s, e) => progress.Report(e.Progress / 100.0);
+            _chdman.ProgressChanged += (s, e) => progress.Report(e.Percent / 100.0);
 
         var info = ChdInfoReader.ReadChdInfo(chdPath);
 

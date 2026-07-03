@@ -1,7 +1,6 @@
 ﻿using Common;
 using Common.WPF.ViewModels;
 using NSW.WPF.Services;
-using Patch.Core;
 using RomForge.Core;
 using RomForge.Core.Models;
 using RomForge.Core.Services.Compression;
@@ -25,7 +24,7 @@ public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
     private string _progressSpeed = string.Empty;
 
     public System.Collections.ObjectModel.ObservableCollection<LogEntry> LogEntries { get; } = [];
-    
+
     public string? SourcePath
     {
         get => _sourcePath;
@@ -37,7 +36,7 @@ public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
             CommandManager.InvalidateRequerySuggested();
         }
     }
-    
+
     public string? PatchPath
     {
         get => _patchPath;
@@ -119,8 +118,8 @@ public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
             return;
 
         _runCts = new CancellationTokenSource();
-        var ct = _runCts.Token;
 
+        var ct = _runCts.Token;
         string outputDir = Path.Combine(Path.GetDirectoryName(SourcePath)!, "output");
         string outputPath = Path.Combine(outputDir, Path.GetFileName(SourcePath));
         outputPath = Utils.GetUniqueFilePath(outputPath);
@@ -135,12 +134,9 @@ public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
             Directory.CreateDirectory(outputDir);
 
             var detected = FormatDetector.Detect(SourcePath);
-            var sourceLength = new FileInfo(SourcePath).Length;
-            var patchLength = new FileInfo(PatchPath).Length;
-            bool useBytes = sourceLength < UniversalPatcher.MemoryThreshold && patchLength < UniversalPatcher.MemoryThreshold;
 
-            await orchestrator.PatchAsync(SourcePath, PatchPath, detected, outputDir, outputPath, useBytes, ct);
-            
+            await orchestrator.PatchAsync(SourcePath, PatchPath, detected, outputDir, outputPath, ct);
+
             stopwatch.Stop();
 
             Log($"패치 완료: {Path.GetFileName(outputPath)} ({stopwatch.Elapsed:mm\\:ss})", LogLevel.Ok);
@@ -148,7 +144,7 @@ public class NormalPatchMainViewModel : ToolTabViewModel, IPatchViewModel
             outputDir.OpenFolder();
         }
         catch (OperationCanceledException)
-        {            
+        {
             Log($"패치 취소: {SourcePath}", LogLevel.Error);
             CleanupTask();
             orchestrator.Cleanup(outputPath);

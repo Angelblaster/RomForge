@@ -18,7 +18,7 @@ public class CompressKnownConverter(Action<string, LogLevel> log, IProgress<Prog
 
                     FileConverter converter = new(AppConfig.Instance.Chdman.Compression);
                     converter.LogMessage += (_, e) => log(e.Message, e.Level);
-                    converter.ProgressChanged += (_, e) => progress.Report(new ProgressInfo { Label = "CHD 변환 중...", Percent = e.Progress });
+                    converter.ProgressChanged += (_, e) => progress.Report(new ProgressInfo { Label = "CHD 변환 중...", Percent = e.Percent });
 
                     var chdResult = await converter.ConvertFileAsync(outputCuePath!, ct);
 
@@ -41,7 +41,7 @@ public class CompressKnownConverter(Action<string, LogLevel> log, IProgress<Prog
 
                     FileConverter converter = new(AppConfig.Instance.Chdman.Compression);
                     converter.LogMessage += (_, e) => log(e.Message, e.Level);
-                    converter.ProgressChanged += (_, e) => progress.Report(new ProgressInfo { Label = "CHD 변환 중...", Percent = e.Progress });
+                    converter.ProgressChanged += (_, e) => progress.Report(new ProgressInfo { Label = "CHD 변환 중...", Percent = e.Percent });
 
                     var chdResult = await converter.ConvertFileAsync(outputPath, ct);
 

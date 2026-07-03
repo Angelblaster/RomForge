@@ -115,41 +115,57 @@ public static class Ppf
             }
         }
 
-        long totalSize = src.Length;
-        var reporter = new ProgressReporter("패치중...", string.Empty, totalSize, progress);
+        long srcSize = src.Length;
+        long patchDataStartPos = pos;
+        long patchDataSize = dataEnd - patchDataStartPos;
+        long totalWork = srcSize;
+        var reporter = new ProgressReporter("패치중...", string.Empty, totalWork, progress);
         Action<long, long>? report = reporter.CreateAction();
         long nextReport = Environment.TickCount64 + 100;
+        const double copyWeight = 0.60;
+        const double patchWeight = 0.40;
 
         src.Position = 0;
         outStream.Position = 0;
+
         byte[] ioBuffer = new byte[64 * 1024];
         long totalCopied = 0;
 
-        while (totalCopied < totalSize)
+        while (totalCopied < srcSize)
         {
             ct.ThrowIfCancellationRequested();
-            int read = src.Read(ioBuffer, 0, (int)Math.Min(ioBuffer.Length, totalSize - totalCopied));
-            if (read == 0) break;
+
+            int read = src.Read(ioBuffer, 0, (int)Math.Min(ioBuffer.Length, srcSize - totalCopied));
+
+            if (read == 0)
+                break;
 
             outStream.Write(ioBuffer, 0, read);
             totalCopied += read;
 
             long now = Environment.TickCount64;
+
             if (now >= nextReport)
             {
                 nextReport = now + 100;
-                report?.Invoke(totalCopied, totalSize);
+
+                double copyProgressPct = (double)totalCopied / srcSize * copyWeight;
+                long virtualReportedBytes = (long)(totalWork * copyProgressPct);
+
+                report?.Invoke(virtualReportedBytes, totalWork);
             }
         }
 
         byte[] buffer = new byte[256];
+
         while (pat.Position < dataEnd)
         {
             ct.ThrowIfCancellationRequested();
 
             long offset = version == 3 ? BitConverter.ToInt64(ReadBytes(pat, 8), 0) : BitConverter.ToUInt32(ReadBytes(pat, 4), 0);
             int length = pat.ReadByte();
-            if (length <= 0 || pat.Position + length > dataEnd) 
+
+            if (length <= 0 || pat.Position + length > dataEnd)
                 break;
 
             pat.ReadExactly(buffer, 0, length);
@@ -162,25 +178,42 @@ public static class Ppf
 
             if (version == 3 && isUndoAvailable)
                 pat.Position += length;
+
+            long now = Environment.TickCount64;
+
+            if (now >= nextReport)
+            {
+                nextReport = now + 100;
+
+                long currentPatRead = pat.Position - patchDataStartPos;
+                double patchProgressPct = (double)currentPatRead / patchDataSize;
+                double totalProgressPct = copyWeight + (patchProgressPct * patchWeight);
+                long virtualReportedBytes = (long)(totalWork * Math.Min(totalProgressPct, 0.995));
+
+                report?.Invoke(virtualReportedBytes, totalWork);
+            }
         }
 
-        report?.Invoke(totalSize, totalSize);
+        report?.Invoke(totalWork, totalWork);
     }
 
     private static byte[] ReadBytes(Stream stream, int count)
     {
         byte[] buffer = new byte[count];
         stream.ReadExactly(buffer, 0, count);
+
         return buffer;
     }
 
     private static void EncodeStreamInternal(Stream src, Stream tar, Stream pat, IProgress<ProgressInfo>? progress, string description, bool enableBlockcheck, CancellationToken ct)
     {
         byte[] header = new byte[60];
+
         HeaderMagic30.CopyTo(header, 0);
         header[5] = 0x02;
 
         byte[] descBytes = Encoding.ASCII.GetBytes(description);
+
         Array.Copy(descBytes, 0, header, DescriptionOffset, Math.Min(descBytes.Length, DescriptionLength));
 
         header[57] = (byte)(enableBlockcheck ? 1 : 0);
@@ -189,11 +222,14 @@ public static class Ppf
         if (enableBlockcheck)
         {
             const long blockStart = 0x9320L;
+
             if (src.Length < blockStart + 1024)
                 throw new InvalidDataException("소스 파일이 너무 짧아 blockcheck를 생성할 수 없습니다.");
 
             src.Position = blockStart;
+
             byte[] blockBuf = new byte[1024];
+
             src.ReadExactly(blockBuf, 0, 1024);
             pat.Write(blockBuf, 0, 1024);
         }
@@ -204,10 +240,12 @@ public static class Ppf
         if (progress is not null)
         {
             var reporter = new ProgressReporter("패치 생성중...", string.Empty, maxLen, progress);
+
             report = reporter.CreateAction();
         }
 
         long nextReport = Environment.TickCount64 + 100;
+
         src.Position = 0;
         tar.Position = 0;
 
@@ -249,6 +287,7 @@ public static class Ppf
                     }
 
                     byte[] offsetBytes = BitConverter.GetBytes(startOffset);
+
                     pat.Write(offsetBytes, 0, offsetBytes.Length);
                     pat.WriteByte((byte)diffBytes.Count);
                     pat.WriteAsync([.. diffBytes], 0, diffBytes.Count, ct).ConfigureAwait(false);
@@ -259,6 +298,7 @@ public static class Ppf
             currentPos += validLen;
 
             long now = Environment.TickCount64;
+
             if (now >= nextReport)
             {
                 nextReport = now + 100;
@@ -272,14 +312,17 @@ public static class Ppf
     private static void ValidateBlockcheckInternal(byte[] header, Stream pat, Stream src, byte imagetype, int version)
     {
         long sourceBlockStart = imagetype != 0 ? 0x80A0L : 0x9320L;
+
         if (src.Length < sourceBlockStart + 1024)
             throw new InvalidDataException("소스 파일이 너무 짧아 blockcheck를 수행할 수 없습니다.");
 
         byte[] patchBlock = new byte[1024];
+
         pat.Position = 60;
         pat.ReadExactly(patchBlock, 0, 1024);
 
         byte[] sourceBlock = new byte[1024];
+
         src.Position = sourceBlockStart;
         src.ReadExactly(sourceBlock, 0, 1024);
 

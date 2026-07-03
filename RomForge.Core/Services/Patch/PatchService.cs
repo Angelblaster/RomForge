@@ -61,8 +61,16 @@ public static class PatchService
 
         ct.ThrowIfCancellationRequested();
 
-        var resultBytes = await
-            UniversalPatcher.ApplyPatchAsync(sourceBytes, patchBytes, progress, ct);
+        var entryProgress = progress == null ? null : new Progress<ProgressInfo>(p =>
+        {
+            progress.Report(new ProgressInfo
+            {
+                Label = sourceEntry.FullName,
+                Percent = p.Percent
+            });
+        });
+
+        var resultBytes = await UniversalPatcher.ApplyPatchAsync(sourceBytes, patchBytes, entryProgress, ct);
 
         var newEntry = outputZip.CreateEntry(sourceEntry.FullName, CompressionLevel.Optimal);
 

@@ -1,5 +1,6 @@
 ﻿using CHD.Core.Models;
 using CHD.Core.Models.Enums;
+using Common;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -46,7 +47,7 @@ public sealed class ChdmanService : IDisposable
 
     #endregion
 
-    public event EventHandler<ProgressEventArgs>? ProgressChanged;
+    public event EventHandler<ProgressInfo>? ProgressChanged;
     public event EventHandler<string>? ErrorReceived;
 
     public ChdmanService()
@@ -56,7 +57,7 @@ public sealed class ChdmanService : IDisposable
             if (percent >= _lastProgress)
             {
                 _lastProgress = percent;
-                ProgressChanged?.Invoke(this, new ProgressEventArgs(percent));
+                ProgressChanged?.Invoke(this, new ProgressInfo { Label = "진행 중", Percent = percent });
             }
         };
         _logCallback = msg => { if (!string.IsNullOrEmpty(msg)) ErrorReceived?.Invoke(this, msg); };

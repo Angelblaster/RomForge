@@ -166,7 +166,7 @@ public class CompressMainViewModel : ToolTabViewModel
                                 FileConverter chdConverter = new(AppConfig.Instance.Chdman.Compression);
 
                                 chdConverter.LogMessage += (_, e) => AppendLog(e.Message, e.Level);
-                                chdConverter.ProgressChanged += (s, e) => Application.Current.Dispatcher.Invoke(() => item.Progress = e.Progress);
+                                chdConverter.ProgressChanged += (s, e) => Application.Current.Dispatcher.Invoke(() => item.Progress = e.Percent);
 
                                 var chdResult = await chdConverter.ConvertFileAsync(item.FilePath, _cts.Token);
 

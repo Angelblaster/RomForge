@@ -140,7 +140,7 @@ public class DreamcastPatchMainViewModel : ToolTabViewModel, IPatchViewModel
 
                 FileConverter converter = new(AppConfig.Instance.Chdman.Compression);
                 converter.LogMessage += (_, e) => Log(e.Message, e.Level);
-                converter.ProgressChanged += (_, e) => Progress = 50 + (e.Progress / 2);
+                converter.ProgressChanged += (_, e) => Progress = 50 + (e.Percent / 2);
 
                 var chdResult = await converter.ConvertFileAsync(newGdiPath, ct);
 
