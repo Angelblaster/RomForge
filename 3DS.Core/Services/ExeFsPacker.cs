@@ -48,6 +48,7 @@ public static class ExeFsPacker
         }
 
         currentOffset = 0;
+
         for (int i = 0; i < files.Count; i++)
         {
             if (i > 0)
@@ -135,6 +136,16 @@ public static class ExeFsPacker
 
                 if (isCompressedCode)
                     exHeader![ExHeaderCompressFlagOffset] &= unchecked((byte)~ExHeaderCompressFlagBit);
+
+                //if (isCompressedCode)
+                //{
+                //    byte[] recompressed = BackwardLz77.Compress(patchedData);
+
+                //    if (recompressed.Length < patchedData.Length)
+                //        patchedData = recompressed;
+                //    else
+                //        exHeader![ExHeaderCompressFlagOffset] &= unchecked((byte)~ExHeaderCompressFlagBit);
+                //}
 
                 patchedFiles.Add(new ExeFsFile
                 {

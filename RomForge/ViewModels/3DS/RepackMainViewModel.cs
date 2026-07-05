@@ -177,7 +177,7 @@ public class RepackMainViewModel : ToolTabViewModel
         var keyStore = new KeyStore();
         string unpackedPath = Path.Combine(OutputPath, "unpacked");
 
-        if (mode != BuildMode.RebuildOnly && Directory.Exists(unpackedPath))
+        if (mode == BuildMode.UnpackOnly && Directory.Exists(unpackedPath))
         {
             if (!MessageBoxHelper.ShowQuestion("기존 언팩 데이터를 삭제하고 새로 진행할까요?"))
                 return;
@@ -210,6 +210,8 @@ public class RepackMainViewModel : ToolTabViewModel
             }
 
             isCompleted = true;
+            ProgressPercent = "100%";
+
             Log($"완료! 총 소요: {sw.Elapsed:mm\\:ss}", LogLevel.Ok);
             OutputPath.OpenFolder();
         }

@@ -3,6 +3,11 @@
 public static class BackwardLz77
 {
     private const int FooterSize = 8;
+    private const int MinMatchLength = 3;
+    private const int MaxMatchLength = 18;
+    private const int MinOffset = 3;
+    private const int MaxOffset = 0x1002;
+    private const int HashChainMaxSteps = 128;
 
     public static byte[] Decompress(byte[] compressed)
     {
@@ -13,7 +18,6 @@ public static class BackwardLz77
 
         uint bufferTopAndBottom = BitConverter.ToUInt32(compressed, compressedSize - 8);
         uint originalBottom = BitConverter.ToUInt32(compressed, compressedSize - 4);
-
         uint top = bufferTopAndBottom & 0xFFFFFF;
         uint bottom = (bufferTopAndBottom >> 24) & 0xFF;
 
@@ -21,8 +25,8 @@ public static class BackwardLz77
             throw new InvalidDataException("BackwardLZ77 푸터 값이 유효하지 않습니다. 압축 플래그 오판이거나 데이터가 손상됐을 수 있습니다.");
 
         uint uncompressedSize = (uint)compressedSize + originalBottom;
-
         byte[] output = new byte[uncompressedSize];
+
         Array.Copy(compressed, output, compressedSize);
 
         int destPos = (int)uncompressedSize;
@@ -49,7 +53,6 @@ public static class BackwardLz77
 
                     int a = output[--srcPos];
                     int b = output[--srcPos];
-
                     int offset = (((a & 0x0F) << 8) | b) + 3;
                     int size = ((a >> 4) & 0x0F) + 3;
 
@@ -71,5 +74,167 @@ public static class BackwardLz77
         }
 
         return output;
+    }
+
+    public static byte[] Compress(byte[] raw)
+    {
+        int n = raw.Length;
+
+        if (n == 0)
+            return raw;
+
+        byte[] rev = new byte[n];
+
+        for (int i = 0; i < n; i++)
+            rev[i] = raw[n - 1 - i];
+
+        var lastPos = new Dictionary<int, int>();
+        int[] prevPos = new int[n];
+        var stream = new List<byte>(n / 2 + 16);
+        int flagIndex = -1;
+        byte currentFlag = 0;
+        int flagBitCount = 0;
+        int j = 0;
+
+        while (j < n)
+        {
+            if (flagIndex == -1)
+            {
+                flagIndex = stream.Count;
+                stream.Add(0);
+                currentFlag = 0;
+                flagBitCount = 0;
+            }
+
+            int bestLen = 0;
+            int bestOff = 0;
+            int maxOff = Math.Min(j, MaxOffset);
+            int maxLen = Math.Min(MaxMatchLength, n - j);
+
+            if (maxOff >= MinOffset && maxLen >= MinMatchLength)
+            {
+                int hash = Hash3(rev, j);
+
+                if (lastPos.TryGetValue(hash, out int cand))
+                {
+                    int steps = 0;
+
+                    while (cand >= 0 && steps < HashChainMaxSteps)
+                    {
+                        int off = j - cand;
+
+                        if (off < MinOffset)
+                        {
+                            cand = prevPos[cand];
+                            steps++;
+                            continue;
+                        }
+
+                        if (off > MaxOffset)
+                            break;
+
+                        int len = MatchLength(rev, cand, j, maxLen);
+
+                        if (len > bestLen)
+                        {
+                            bestLen = len;
+                            bestOff = off;
+
+                            if (len >= maxLen)
+                                break;
+                        }
+                        cand = prevPos[cand];
+                        steps++;
+                    }
+                }
+            }
+
+            if (bestLen >= MinMatchLength)
+            {
+                int lengthField = bestLen - 3;
+                int offsetField = bestOff - 3;
+                byte a = (byte)(((lengthField & 0xF) << 4) | ((offsetField >> 8) & 0xF));
+                byte b = (byte)(offsetField & 0xFF);
+
+                stream.Add(a);
+                stream.Add(b);
+                currentFlag |= (byte)(1 << (7 - flagBitCount));
+
+                int end = j + bestLen;
+                int insertEnd = Math.Min(end, n - 2);
+
+                for (int p = j; p < insertEnd; p++)
+                {
+                    int h = Hash3(rev, p);
+
+                    prevPos[p] = lastPos.TryGetValue(h, out int pv) ? pv : -1;
+                    lastPos[h] = p;
+                }
+                j = end;
+            }
+            else
+            {
+                stream.Add(rev[j]);
+
+                if (j < n - 2)
+                {
+                    int h = Hash3(rev, j);
+
+                    prevPos[j] = lastPos.TryGetValue(h, out int pv) ? pv : -1;
+                    lastPos[h] = j;
+                }
+                j++;
+            }
+
+            flagBitCount++;
+
+            if (flagBitCount == 8)
+            {
+                stream[flagIndex] = currentFlag;
+                flagIndex = -1;
+            }
+        }
+
+        if (flagIndex != -1)
+            stream[flagIndex] = currentFlag;
+
+        byte[] s = stream.ToArray();
+
+        Array.Reverse(s);
+
+        int top = s.Length + FooterSize;
+        const int bottom = FooterSize;
+        int compressedSize = s.Length + FooterSize;
+
+        if (compressedSize >= n)
+            return raw;
+
+        uint originalBottom = (uint)(n - compressedSize);
+        byte[] result = new byte[compressedSize];
+
+        Array.Copy(s, result, s.Length);
+
+        uint bufferTopAndBottom = (uint)top | ((uint)bottom << 24);
+
+        BitConverter.GetBytes(bufferTopAndBottom).CopyTo(result, s.Length);
+        BitConverter.GetBytes(originalBottom).CopyTo(result, s.Length + 4);
+
+        byte[] verify = Decompress(result);
+
+        if (!verify.AsSpan().SequenceEqual(raw))
+            throw new InvalidOperationException("BackwardLZ77 압축 결과 검증에 실패했습니다. 압축 로직에 문제가 있습니다.");
+
+        return result;
+    }
+
+    private static int Hash3(byte[] data, int pos) => (data[pos] << 16) | (data[pos + 1] << 8) | data[pos + 2];
+
+    private static int MatchLength(byte[] data, int candidate, int current, int maxLen)
+    {
+        int len = 0;
+
+        while (len < maxLen && data[candidate + len] == data[current + len])
+            len++;
+        return len;
     }
 }
