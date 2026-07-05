@@ -107,6 +107,11 @@ public partial class PackingTab : UserControl
         ExportImage(ViewModel?.Pic1Image, "Background.PNG");
     }
 
+    private void BaseImage_Reset_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel?.ResetBaseImages();
+    }
+
     private void BootLogo_Drop(object sender, DragEventArgs e)
     {
         e.Handled = true;
@@ -130,7 +135,7 @@ public partial class PackingTab : UserControl
         if (ViewModel?.BootLogoImage != null)
             ExportImage(ViewModel.BootLogoImage, "BootLogo.PNG");
     }
-
+    
     private void BootLogo_Reset_Click(object sender, RoutedEventArgs e)
     {
         ViewModel?.ResetBootLogo();

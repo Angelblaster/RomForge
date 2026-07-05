@@ -198,7 +198,7 @@ public static class BackwardLz77
         if (flagIndex != -1)
             stream[flagIndex] = currentFlag;
 
-        byte[] s = stream.ToArray();
+        byte[] s = [.. stream];
 
         Array.Reverse(s);
 

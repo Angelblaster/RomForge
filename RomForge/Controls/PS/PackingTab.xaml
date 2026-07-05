@@ -4,19 +4,18 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:RomForge.Controls.PS"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="900">
+             mc:Ignorable="d" d:DesignWidth="900" Height="465">
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="*" MinHeight="300"/>
+            <RowDefinition Height="*" MinHeight="280"/>
             <!-- Row 0: 리스트 + 미리보기 -->
-            <RowDefinition Height="8"/>
+            <RowDefinition Height="4"/>
             <RowDefinition Height="Auto"/>
             <!-- Row 2: 고급 설정 (전체 폭, 맨 아래) -->
-            <RowDefinition Height="8"/>
+            <RowDefinition Height="4"/>
             <RowDefinition Height="Auto"/>
             <!-- Row 4: 진행도 -->
-            <RowDefinition Height="8"/>
+            <RowDefinition Height="4"/>
             <RowDefinition Height="Auto"/>
             <!-- Row 6: 버튼 바 -->
         </Grid.RowDefinitions>
@@ -135,7 +134,6 @@
             <TabControl Grid.Column="1" IsEnabled="{Binding IsUnlocked}" Background="Transparent" BorderThickness="0">
                 <TabItem Header="기본 이미지">
                     <StackPanel>
-                        <TextBlock Text="{Binding GameTitle}" ToolTip="{Binding GameTitle}" TextTrimming="CharacterEllipsis" MaxWidth="380" FontSize="15" FontWeight="Bold" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <Viewbox Stretch="Uniform">
                             <Border Width="480" Height="272" Margin="5" CornerRadius="18" BorderBrush="#40FFFFFF" BorderThickness="0" AllowDrop="True" Drop="Pic1_Drop">
                                 <Border.OpacityMask>
@@ -174,12 +172,12 @@
                                 </Grid>
                             </Border>
                         </Viewbox>
+                        <Button Style="{StaticResource CancelButton}" Content="비우기" Click="BaseImage_Reset_Click" FontSize="11" Padding="10,4" Background="Transparent" Foreground="#8FA3FF" BorderThickness="1" BorderBrush="#308FA3FF" Cursor="Hand"/>
                     </StackPanel>
                 </TabItem>
 
                 <TabItem Header="부트 로고">
                     <StackPanel>
-                        <TextBlock Text="{Binding GameTitle}" ToolTip="{Binding GameTitle}" TextTrimming="CharacterEllipsis" MaxWidth="380" FontSize="15" FontWeight="Bold" Margin="5,5,5,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <Viewbox Stretch="Uniform">
                             <Border Width="480" Height="272" Margin="5" CornerRadius="18" BorderBrush="#40FFFFFF" BorderThickness="1" Background="Transparent" AllowDrop="True" Drop="BootLogo_Drop">
                                 <Border.OpacityMask>
@@ -260,12 +258,12 @@
 
         <Border Grid.Row="2" Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12,8" IsEnabled="{Binding CanEditPopsConfig}">
             <StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                     <TextBlock Text="POPS 에뮬레이터 설정" Foreground="#D4AF37" FontSize="12" FontWeight="Bold"/>
                     <TextBlock Text="프리셋 설정 로드됨 (수동 설정 비활성화)"  Foreground="#4CAF50" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center" Visibility="{Binding HasPresetConfig, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 </StackPanel>
 
-                <Grid Margin="0,0,0,8">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="10"/>
@@ -290,18 +288,20 @@
         </Border>
 
         <!-- ===== Row 4: 진행도 ===== -->
-        <Border Grid.Row="4" Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="0,1,0,0" CornerRadius="8" Margin="0,0,0,2" Padding="8,0" Visibility="{Binding IsLocked, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <Border Grid.Row="4" Background="#12FFFFFF" BorderBrush="#30FFFFFF" BorderThickness="0,1,0,0" CornerRadius="8" Margin="0,0,0,2" Padding="8,0">
             <Grid Height="28">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="140"/>
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0" Text="{Binding ProgressLabel}" Foreground="#A0A0A0" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                <TextBlock Grid.Column="1" Margin="0,0,10,0" Text="{Binding ProgressPercent}" Foreground="#4CAF50" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Margin="0,0,10,0" Text="{Binding ProgressSpeed}" Foreground="Gray" FontSize="11" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Margin="0,0,10,0" Text="{Binding ProgressTime}" Foreground="#4CAF50" FontSize="11" VerticalAlignment="Center"/>
 
-                <Grid Grid.Column="2" Height="10" VerticalAlignment="Center">
+                <Grid Grid.Column="3" Height="10" VerticalAlignment="Center">
                     <Border Background="#25FFFFFF" CornerRadius="5"/>
                     <Border CornerRadius="5" ClipToBounds="True">
                         <Border Background="#4CAF50" CornerRadius="5" RenderTransformOrigin="0,0.5">

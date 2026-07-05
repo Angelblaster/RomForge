@@ -1,13 +1,14 @@
 ﻿using Common;
 using Common.WPF.ViewModels;
+using LibHac;
 using NSW.WPF.Services;
 using PBP.Core.Models;
 using PBP.Core.Services;
 using RomForge.Core;
-using RomForge.Core.UI.Command;
 using RomForge.Core.Models;
 using RomForge.Core.Models.PS;
 using RomForge.Core.Services.PS;
+using RomForge.Core.UI.Command;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
@@ -293,10 +294,8 @@ public class PackingMainViewModel : ToolTabViewModel
     {
         FileItems.Clear();
         OnPropertyChanged(nameof(HintVisibility));
-        _lastIconGameId = null;
-        Icon0Image = EmbeddedAssetProvider.GetDefaultIcon0().ToBitmapImage();
-        Pic0Image = EmbeddedAssetProvider.GetDefaultPic0().ToBitmapImage();
-        Pic1Image = EmbeddedAssetProvider.GetDefaultPic1().ToBitmapImage();
+        _lastIconGameId = null;        
+        ResetBaseImages();
         ResetBootLogo();
         OnPropertyChanged(nameof(HasPresetConfig));
         OnPropertyChanged(nameof(CanEditPopsConfig));
@@ -328,6 +327,16 @@ public class PackingMainViewModel : ToolTabViewModel
         var (bytes, img) = AssetImageEditor.Resize(rawBytes, 480, 272);
         BootLogoBytes = bytes;
         BootLogoImage = img;
+    }
+
+    public void ResetBaseImages()
+    {        
+        Icon0Bytes = EmbeddedAssetProvider.GetDefaultIcon0();
+        Icon0Image = Icon0Bytes.ToBitmapImage();
+        Pic0Bytes = EmbeddedAssetProvider.GetDefaultPic0();
+        Pic0Image = Pic0Bytes.ToBitmapImage();
+        Pic1Bytes = EmbeddedAssetProvider.GetDefaultPic1();
+        Pic1Image = Pic1Bytes.ToBitmapImage();
     }
 
     public void ResetBootLogo()
