@@ -115,7 +115,7 @@
 
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="타이틀" Width="280">
+                    <GridViewColumn Header="타이틀" Width="230">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,5">

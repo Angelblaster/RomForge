@@ -1,5 +1,6 @@
 ﻿using NSW.WPF.UI;
 using Patch.Core.Formats.DCP.Services;
+using RomForge.Core;
 using RomForge.Core.UI.Helpers;
 using RomForge.ViewModels;
 using System.ComponentModel;
@@ -19,22 +20,6 @@ public partial class MainWindow : Window
         DataContext = ViewModel;
         InitializeComponent();
         Closing += MainWindow_Closing;
-    }
-
-    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            await DcpGdRomApplier.ApplyAsync(
-                gdiPath: @"\\CDH5\download\게임\한글패치\GDI\Puyo Puyo 4\Puyo Puyo 4 (Japan).gdi",
-                //gdiPath: @"\\CDH5\download\게임\한글패치\GDI\Rez\Rez v1.003 (2001)(Sega)(PAL)(M6)[!].gdi",
-                dcpPath: @"\\CDH5\download\게임\한글패치\GDI\Puyo Puyo 4\Puyo Puyo 4 (Dreamcast) KR v1.0.0.dcp",
-                outputDir: @"D:\Output");
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"{ex.GetType().Name}: {ex.Message}\n\n{ex.StackTrace}", "GDI 추출 실패", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
     }
 
     protected override void OnSourceInitialized(EventArgs e)

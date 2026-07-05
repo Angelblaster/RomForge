@@ -23,6 +23,8 @@ public class InstallerMainViewModel : ToolTabViewModel
     private double _progress;
     private bool _isLoading;
     private string _progressText = string.Empty;
+    private string _progressTime = string.Empty;
+    private string _progressSpeed = string.Empty;
     private KeyStore? _keyStore;
     private SdCrypto? _sdCrypto;
     private SdTitleScanner? _scanner;
@@ -45,11 +47,11 @@ public class InstallerMainViewModel : ToolTabViewModel
     public string SdPath
     {
         get => _sdPath;
-        set 
-        { 
-            _sdPath = value; 
-            InvalidateSession(); 
-            OnPropertyChanged(); 
+        set
+        {
+            _sdPath = value;
+            InvalidateSession();
+            OnPropertyChanged();
             OnPropertyChanged(nameof(CanLoad));
             OnPropertyChanged(nameof(CanInstall));
         }
@@ -58,11 +60,11 @@ public class InstallerMainViewModel : ToolTabViewModel
     public string MovablePath
     {
         get => _movablePath;
-        set 
-        { 
-            _movablePath = value; 
-            InvalidateSession(); 
-            OnPropertyChanged(); 
+        set
+        {
+            _movablePath = value;
+            InvalidateSession();
+            OnPropertyChanged();
             OnPropertyChanged(nameof(CanLoad));
             OnPropertyChanged(nameof(CanInstall));
         }
@@ -84,6 +86,18 @@ public class InstallerMainViewModel : ToolTabViewModel
     {
         get => _progressText;
         set { _progressText = value; OnPropertyChanged(); }
+    }
+
+    public string ProgressTime
+    {
+        get => _progressTime;
+        set { _progressTime = value; OnPropertyChanged(); }
+    }
+
+    public string ProgressSpeed
+    {
+        get => _progressSpeed;
+        set { _progressSpeed = value; OnPropertyChanged(); }
     }
 
     public bool IsPathValid => !string.IsNullOrEmpty(SdPath) && !string.IsNullOrEmpty(MovablePath);
@@ -137,7 +151,7 @@ public class InstallerMainViewModel : ToolTabViewModel
 
     private void EnsureInitialized()
     {
-        if (_keyStore != null) 
+        if (_keyStore != null)
             return;
 
         _keyStore = new KeyStore();
@@ -222,11 +236,14 @@ public class InstallerMainViewModel : ToolTabViewModel
             OnPropertyChanged(nameof(CancelButtonVisibility));
 
             var extractor = new TitleExtractor(_keyStore!, _sdCrypto!, _scanner!);
-            extractor.OnProgress += (pct, cur, total) => Application.Current.Dispatcher.Invoke(() =>
+
+            var extractProgress = new Progress<ProgressInfo>(p =>
             {
-                Progress = pct;
-                ProgressText = $"{pct:F0}%";
-                StatusMessage = $"추출 중: {selected.ShortDescription} {cur / (1024.0 * 1024):F1} MB / {total / (1024.0 * 1024):F1} MB";
+                Progress = p.Percent;
+                ProgressText = $"{p.Percent}%";
+                ProgressTime = p.TimeInfo;
+                ProgressSpeed = p.Speed;
+                StatusMessage = $"추출 중: {selected.ShortDescription} - {p.Label}";
             });
 
             try
@@ -238,9 +255,9 @@ public class InstallerMainViewModel : ToolTabViewModel
                     async ct =>
                     {
                         if (asCci)
-                            await extractor.ExtractToCciAsync(selected.Title, outputPath, ct);
+                            await extractor.ExtractToCciAsync(selected.Title, outputPath, extractProgress, ct);
                         else
-                            await extractor.ExtractToCiaAsync(selected.Title, outputPath, ct);
+                            await extractor.ExtractToCiaAsync(selected.Title, outputPath, extractProgress, ct);
                     },
                     $"추출 완료: {selected.ShortDescription}");
             }
@@ -300,11 +317,13 @@ public class InstallerMainViewModel : ToolTabViewModel
 
                 installer.OnLog += msg => AppendLog($"{msg}", LogLevel.Info);
 
-                installer.OnProgress += (pct, cur, total) => Application.Current.Dispatcher.Invoke(() =>
+                var installProgress = new Progress<ProgressInfo>(p =>
                 {
-                    Progress = pct;
-                    selected.Progress = pct;
-                    ProgressText = $"{pct:F0}%";
+                    Progress = p.Percent;
+                    selected.Progress = p.Percent;
+                    ProgressText = $"{p.Percent}%";
+                    ProgressTime = p.TimeInfo;
+                    ProgressSpeed = p.Speed;
                 });
 
                 string ext = Path.GetExtension(selected.FilePath).ToLowerInvariant();
@@ -314,7 +333,7 @@ public class InstallerMainViewModel : ToolTabViewModel
                         {
                             var reader = new CiaReader(_keyStore!);
                             await using var cia = await reader.OpenAsync(selected.FilePath, ct: ct);
-                            await installer.InstallAsync(cia, ct);
+                            await installer.InstallAsync(cia, installProgress, ct);
                             break;
                         }
                     case ".cci":
@@ -322,7 +341,7 @@ public class InstallerMainViewModel : ToolTabViewModel
                     case ".zcci":
                         {
                             await using var cci = await CciSource.OpenAsync(selected.FilePath, _keyStore!, ct: ct);
-                            await installer.InstallAsync(cci, ct);
+                            await installer.InstallAsync(cci, installProgress, ct);
                             break;
                         }
                     default:
@@ -388,12 +407,14 @@ public class InstallerMainViewModel : ToolTabViewModel
         {
             Progress = 0;
             ProgressText = string.Empty;
+            ProgressTime = string.Empty;
+            ProgressSpeed = string.Empty;
         }
     }
 
     public void AppendLog(string msg, LogLevel level = LogLevel.Info)
     {
-        if (Application.Current?.Dispatcher == null) 
+        if (Application.Current?.Dispatcher == null)
             return;
 
         Application.Current.Dispatcher.Invoke(() =>
@@ -403,7 +424,7 @@ public class InstallerMainViewModel : ToolTabViewModel
 
     private void ClearLog()
     {
-        if (Application.Current?.Dispatcher == null) 
+        if (Application.Current?.Dispatcher == null)
             return;
 
         Application.Current.Dispatcher.Invoke(() => LogEntries.Clear());

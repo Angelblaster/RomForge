@@ -4,6 +4,7 @@ using _3DS.Core.Interfaces;
 using _3DS.Core.Models;
 using _3DS.Core.Save;
 using _3DS.Core.Save.Enums;
+using Common;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
@@ -16,13 +17,12 @@ public class TitleInstaller(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
     private readonly string _id1Path = scanner.Id1Path;
 
     public event Action<string>? OnLog;
-    public event Action<double, long, long>? OnProgress;
 
-    public Task InstallAsync(CiaSource cia, CancellationToken ct = default) => InstallCoreAsync(cia, cia.TmdRaw, (idx) => cia.OpenContentNcchEncrypted(idx), ct);
+    public Task InstallAsync(CiaSource cia, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default) => InstallCoreAsync(cia, cia.TmdRaw, (idx) => cia.OpenContentNcchEncrypted(idx), progress, ct);
 
-    public Task InstallAsync(CciSource cci, CancellationToken ct = default) => InstallCoreAsync(cci, cci.TmdRaw, (idx) => cci.OpenContentDecrypted(idx), ct);
+    public Task InstallAsync(CciSource cci, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default) => InstallCoreAsync(cci, cci.TmdRaw, (idx) => cci.OpenContentDecrypted(idx), progress, ct);
 
-    private async Task InstallCoreAsync(IInstallSource source, byte[] tmdRaw, Func<int, ValueTask<(Stream stream, long size)>> openContent, CancellationToken ct)
+    private async Task InstallCoreAsync(IInstallSource source, byte[] tmdRaw, Func<int, ValueTask<(Stream stream, long size)>> openContent, IProgress<ProgressInfo>? progress, CancellationToken ct)
     {
         var tmd = source.TmdHeader;
         ulong titleId = tmd.TitleId;
@@ -56,6 +56,9 @@ public class TitleInstaller(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
         long totalBytes = tmd.Contents.Sum(c => c.ContentSize);
         long written = 0;
 
+        var reporter = progress is null ? null : new ProgressReporter("설치 중...", string.Empty, totalBytes, progress);
+        var report = reporter?.CreateAction();
+
         for (int i = 0; i < tmd.Contents.Length; i++)
         {
             ct.ThrowIfCancellationRequested();
@@ -87,7 +90,7 @@ public class TitleInstaller(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
                     bytesWritten =>
                     {
                         written += bytesWritten;
-                        OnProgress?.Invoke((double)written / totalBytes * 100, written, totalBytes);
+                        report?.Invoke(written, totalBytes);
                     }, ct);
 
                 if (!hash.AsSpan().SequenceEqual(content.Sha256Hash))
@@ -142,7 +145,7 @@ public class TitleInstaller(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
         if (!File.Exists(homebrewPath))
             await File.WriteAllBytesAsync(homebrewPath, Properties.Resources.custom_install_finalize, ct);
 
-        OnProgress?.Invoke(100, totalBytes, totalBytes);
+        report?.Invoke(totalBytes, totalBytes);
     }
 
     private async Task<byte[]> BuildCmdAsync(IInstallSource source, int cmdId, CancellationToken ct)
@@ -230,13 +233,13 @@ public class TitleInstaller(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
         await ms.WriteAsync(header, ct);
         await ms.WriteAsync(headerCmac, ct);
 
-        foreach (var id in idsByIndex) 
+        foreach (var id in idsByIndex)
             await ms.WriteAsync(id, ct);
 
-        foreach (var id in installedIds) 
+        foreach (var id in installedIds)
             await ms.WriteAsync(id, ct);
 
-        foreach (var c in cmacs) await 
+        foreach (var c in cmacs) await
                 ms.WriteAsync(c, ct);
 
         return ms.ToArray();
@@ -380,7 +383,7 @@ public class TitleInstaller(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
                 int toRead = (int)Math.Min(buf.Length, remaining);
                 int read = await input.ReadAsync(buf.AsMemory(0, toRead), ct);
 
-                if (read == 0) 
+                if (read == 0)
                     break;
 
                 sha.AppendData(buf, 0, read);
@@ -404,7 +407,7 @@ public class TitleInstaller(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
             }
         }
         finally
-        { 
+        {
             pool.Return(buf);
         }
 

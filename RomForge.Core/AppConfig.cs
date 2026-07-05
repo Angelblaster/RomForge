@@ -2,6 +2,7 @@ using Common.WPF.ViewModels;
 using System.ComponentModel;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace RomForge.Core;
 
@@ -80,6 +81,7 @@ public class AppConfig : ViewModelBase
     private static readonly Lazy<AppConfig> _instance = new(() => new AppConfig().LoadInternal());
     public static AppConfig Instance => _instance.Value;
 
+    [JsonConstructor]
     private AppConfig() { }
 
     private PatchConfig _patch = new();

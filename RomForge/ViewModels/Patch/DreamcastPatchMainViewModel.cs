@@ -39,7 +39,7 @@ public class DreamcastPatchMainViewModel : ToolTabViewModel, IPatchViewModel
         }
     }
 
-    
+
     public string? PatchPath
     {
         get => _patchPath;
@@ -132,16 +132,36 @@ public class DreamcastPatchMainViewModel : ToolTabViewModel, IPatchViewModel
         {
             Directory.CreateDirectory(outputDir);
 
+            long totalBytes = GetGdiTotalBytes(SourcePath);
+
+            var patchProgressAsIProgress = new Progress<ProgressInfo>(info =>
+            {
+                ProgressPct = info.Percent;
+                ProgressLabel = info.Label;
+                ProgressPercent = $"{info.Percent}%";
+                ProgressTime = info.TimeInfo;
+                ProgressSpeed = info.Speed;
+            });
+
+            ProgressReporter? patchReporter = totalBytes > 0
+                ? new ProgressReporter("패치 적용 중...", string.Empty, totalBytes, patchProgressAsIProgress)
+                : null;
+
             await DcpGdRomApplier.ApplyAsync(SourcePath, PatchPath, outputDir, (p, msg) =>
             {
                 Application.Current?.Dispatcher?.Invoke(() =>
                 {
-                    ProgressPct = AutoCompress ? (int)(p * 50) : (int)(p * 100);
-                    ProgressLabel = msg;
+                    if (patchReporter is not null)
+                        patchReporter.ReportPercent(p);
+                    else
+                    {
+                        ProgressPct = (int)(p * 100);
+                        ProgressLabel = msg;
+                    }
                 });
             }, ct);
 
-            ProgressPct = AutoCompress ? 50 : 100;
+            ProgressPct = 100;
             ProgressLabel = "패치 완료";
             Log($"패치 완료: {outputDir}", LogLevel.Highlight);
 
@@ -149,21 +169,22 @@ public class DreamcastPatchMainViewModel : ToolTabViewModel, IPatchViewModel
 
             if (AutoCompress)
             {
+                ProgressPct = 0;
                 ProgressLabel = "CHD 변환 중...";
                 Log("CHD 변환 시작", LogLevel.Highlight);
 
                 FileConverter converter = new(AppConfig.Instance.Chdman.Compression);
-                converter.LogMessage += (_, e) => Log(e.Message, e.Level);                
+                converter.LogMessage += (_, e) => Log(e.Message, e.Level);
 
                 var chdProgress = new Progress<ProgressInfo>(p =>
                 {
-                    ProgressPct = 50 + (p.Percent / 2);
+                    ProgressPct = p.Percent;
                     ProgressLabel = p.Label;
-                    
+                    ProgressPercent = $"{p.Percent}%";
+                    ProgressTime = p.TimeInfo;
+                    ProgressSpeed = p.Speed;
                 });
 
-                ProgressReporter reporter = new(Path.GetFileName(SourcePath), string.Empty, 0, chdProgress);
-                
                 var chdResult = await converter.ConvertFileAsync(newGdiPath, chdProgress, ct);
 
                 if (!chdResult.Success)
@@ -189,6 +210,32 @@ public class DreamcastPatchMainViewModel : ToolTabViewModel, IPatchViewModel
             Log($"패치 실패: {ex.Message}", LogLevel.Error);
             CleanupTask();
             DeleteOutputDirectory(outputDir);
+        }
+    }
+
+    private static long GetGdiTotalBytes(string gdiPath)
+    {
+        try
+        {
+            if (!File.Exists(gdiPath))
+                return 0;
+
+            long total = 0;
+            var sourceDir = Path.GetDirectoryName(gdiPath)!;
+
+            foreach (var fileName in ConversionSource.ParseFilesFromGdi(gdiPath))
+            {
+                string filePath = Path.Combine(sourceDir, Path.GetFileName(fileName));
+
+                if (File.Exists(filePath))
+                    total += new FileInfo(filePath).Length;
+            }
+
+            return total;
+        }
+        catch
+        {
+            return 0;
         }
     }
 

@@ -20,9 +20,8 @@ public class TitleExtractor(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
     private readonly string _id1Path = scanner.Id1Path;
 
     public event Action<string>? OnLog;
-    public event Action<double, long, long>? OnProgress;
 
-    public async Task ExtractToCiaAsync(InstalledTitle title, string outputPath, CancellationToken ct = default)
+    public async Task ExtractToCiaAsync(InstalledTitle title, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         Log($"추출 중: {title.TitleId}");
         bool completed = false;
@@ -33,7 +32,7 @@ public class TitleExtractor(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
 
             await using var output = File.Create(outputPath);
 
-            await ExtractAsync(title, output, ct);
+            await ExtractAsync(title, output, progress, ct);
 
             completed = true;
 
@@ -46,7 +45,7 @@ public class TitleExtractor(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
         }
     }
 
-    private async Task ExtractAsync(InstalledTitle title, Stream output, CancellationToken ct)
+    private async Task ExtractAsync(InstalledTitle title, Stream output, IProgress<ProgressInfo>? progress, CancellationToken ct)
     {
         string contentPath = title.ContentPath;
         string contentRootCmd = $"/title/{title.TitleIdHigh}/{title.TitleIdLow}/content";
@@ -137,6 +136,9 @@ public class TitleExtractor(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
         long written = 0;
         var contentHashes = new byte[contents.Count][];
 
+        var reporter = progress is null ? null : new ProgressReporter("CIA 추출 중...", string.Empty, totalBytes, progress);
+        var report = reporter?.CreateAction();
+
         for (int i = 0; i < contents.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
@@ -165,7 +167,7 @@ public class TitleExtractor(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
                     bytesWritten =>
                     {
                         written += bytesWritten;
-                        OnProgress?.Invoke((double)written / totalBytes * 100, written, totalBytes);
+                        report?.Invoke(written, totalBytes);
                     }, ct);
             }
 
@@ -190,10 +192,10 @@ public class TitleExtractor(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
 
         await output.WriteAsync(meta, ct);
 
-        OnProgress?.Invoke(100, totalBytes, totalBytes);
+        report?.Invoke(totalBytes, totalBytes);
     }
 
-    public async Task ExtractToCciAsync(InstalledTitle title, string outputPath, CancellationToken ct = default)
+    public async Task ExtractToCciAsync(InstalledTitle title, string outputPath, IProgress<ProgressInfo>? progress = null, CancellationToken ct = default)
     {
         Log($"CCI 추출 중: {title.TitleId}");
         bool completed = false;
@@ -203,23 +205,15 @@ public class TitleExtractor(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
             var (contents, _) = await BuildContentsAsync(title, ct);
             var source = new SdNcsdSource(contents, keyStore, sdCrypto);
             long totalSize = NcsdBuilder.CalculateOutputSize(source);
-            long processedBytes = 0;
 
-            var progress =
-                new Progress<ProgressInfo>(p =>
-                {
-                    processedBytes = (long)(p.Percent / 100.0 * totalSize);
-                    OnProgress?.Invoke(p.Percent, processedBytes, totalSize);
-                });
-
-            var reporter = new ProgressReporter(title.TitleId, title.TitleId, totalEstimated: 0, progress);
+            var reporter = progress is null ? null : new ProgressReporter(title.TitleId, title.TitleId, totalSize, progress);
 
             outputPath = Utils.GetUniqueFilePath(outputPath);
 
             await using var output = File.Create(outputPath);
             await using (source)
             {
-                await NcsdBuilder.BuildAsync(source, output, reporter.CreateAction(), ct);
+                await NcsdBuilder.BuildAsync(source, output, reporter?.CreateAction() ?? ((_, _) => { }), ct);
             }
 
             completed = true;
@@ -287,7 +281,7 @@ public class TitleExtractor(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
 
     private static async Task<byte[]?> ReadExeFsIconAsync(Stream ncchStream, NcchHeader ncch, CancellationToken ct)
     {
-        if (ncch.ExefsOffset == 0) 
+        if (ncch.ExefsOffset == 0)
             return null;
 
         long exefsStart = (long)ncch.ExefsOffset * 0x200;
@@ -330,7 +324,7 @@ public class TitleExtractor(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
                 int toRead = (int)Math.Min(buf.Length, remaining);
                 int read = await input.ReadAsync(buf.AsMemory(0, toRead), ct);
 
-                if (read == 0) 
+                if (read == 0)
                     break;
 
                 sha.AppendData(buf, 0, read);
@@ -434,7 +428,7 @@ public class TitleExtractor(KeyStore keyStore, SdCrypto sdCrypto, SdTitleScanner
 
         int hdr = 0x140;
 
-        System.Text.Encoding.ASCII.GetBytes("Root-CA00000004-CP0000000a") .CopyTo(buf, hdr + 0x00);
+        System.Text.Encoding.ASCII.GetBytes("Root-CA00000004-CP0000000a").CopyTo(buf, hdr + 0x00);
         buf[hdr + 0x40] = 0x01;
 
         BinaryPrimitives.WriteUInt64BigEndian(buf.AsSpan(hdr + 0x4C), tmd.TitleId);

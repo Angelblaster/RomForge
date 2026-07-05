@@ -11,7 +11,6 @@ public class ZipCompressor(Action<string, LogLevel> log, IProgress<ProgressInfo>
         log($"압축 시작: {Path.GetFileName(sourcePath)}", LogLevel.Highlight);
 
         string zipPath = Path.Combine(outputDir, Path.GetFileNameWithoutExtension(sourcePath) + ".zip");
-
         zipPath = Utils.GetUniqueFilePath(zipPath);
 
         await Task.Run(() =>
@@ -26,6 +25,9 @@ public class ZipCompressor(Action<string, LogLevel> log, IProgress<ProgressInfo>
             long bytesReadTotal = 0;
             int bytesRead;
 
+            var reporter = new ProgressReporter("압축 중...", string.Empty, totalBytes, progress);
+            var report = reporter.CreateAction();
+
             while ((bytesRead = sourceStream.Read(buffer, 0, buffer.Length)) > 0)
             {
                 ct.ThrowIfCancellationRequested();
@@ -34,7 +36,7 @@ public class ZipCompressor(Action<string, LogLevel> log, IProgress<ProgressInfo>
                 bytesReadTotal += bytesRead;
 
                 if (totalBytes > 0)
-                    progress.Report(new ProgressInfo { Label = "압축 중...", Percent = (int)((double)bytesReadTotal / totalBytes * 100) });
+                    report(bytesReadTotal, totalBytes);
             }
         }, ct);
 

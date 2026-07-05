@@ -103,21 +103,17 @@ public sealed class ChdmanService : IDisposable
     {
         string originalDir = Directory.GetCurrentDirectory();
         int lastProgress = 0;
-
         string ext = Path.GetExtension(input);
-
         long totallSize = 0;
 
         switch (ext.ToLowerInvariant())
         {
             case ".cue":
                 {
-                    var referencedBins = ConversionSource.ParseBinsFromCue(Path.Combine(workingDir, input));                    
-
+                    var referencedBins = ConversionSource.ParseBinsFromCue(Path.Combine(workingDir, input));
                     foreach (var binName in referencedBins)
                     {
                         string binPath = Path.Combine(workingDir, Path.GetFileName(binName));
-
                         if (File.Exists(binPath))
                             totallSize += new FileInfo(binPath).Length;
                     }
@@ -126,11 +122,9 @@ public sealed class ChdmanService : IDisposable
             case ".gdi":
                 {
                     var referencedBins = ConversionSource.ParseFilesFromGdi(Path.Combine(workingDir, input));
-
                     foreach (var binName in referencedBins)
                     {
                         string binPath = Path.Combine(workingDir, Path.GetFileName(binName));
-
                         if (File.Exists(binPath))
                             totallSize += new FileInfo(binPath).Length;
                     }
@@ -138,12 +132,26 @@ public sealed class ChdmanService : IDisposable
                 break;
             case ".bin":
             case ".iso":
+                {
+                    string path = Path.Combine(workingDir, input);
+                    if (File.Exists(path))
+                        totallSize = new FileInfo(path).Length;
+                }
+                break;
             case ".chd":
                 {
                     string path = Path.Combine(workingDir, input);
 
-                    if (File.Exists(path))
-                        totallSize = new FileInfo(path).Length;
+                    try
+                    {
+                        var info = ChdInfoReader.ReadChdInfo(path);
+                        totallSize = CalculateOriginalSize(info);
+                    }
+                    catch
+                    {
+                        if (File.Exists(path))
+                            totallSize = new FileInfo(path).Length;
+                    }
                 }
                 break;
         }
@@ -154,7 +162,7 @@ public sealed class ChdmanService : IDisposable
         {
             if (percent >= lastProgress)
             {
-                lastProgress = percent;                
+                lastProgress = percent;
                 reporter?.ReportPercent(percent / 100.0);
             }
         };
@@ -179,7 +187,6 @@ public sealed class ChdmanService : IDisposable
             Directory.SetCurrentDirectory(originalDir);
         }
     }
-
     public static ChdmanInfo GetChdInfo(string chdPath)
     {
         chdPath = Path.GetFullPath(chdPath);
