@@ -8,7 +8,6 @@ using NSW.HacPack.Enums;
 using NSW.HacPack.Services;
 using NSW.M1.Core.Models;
 using NSW.Utils;
-using Patch.Core.Formats;
 using System.Diagnostics;
 using Path = System.IO.Path;
 
@@ -42,7 +41,7 @@ public static class NspBuildService
         if (mode == BuildMode.RebuildOnly)
         {
             log("━━ 기존 언팩 데이터 스캔 중... ━━", LogLevel.Info);
-            unpackResult = ScanExistingUnpackedDir(dirs.Unpacked, req.OverrideSdkVersion, req.OverrideKeyGeneration);
+            unpackResult = UnpackedDirScanner.Scan(dirs.Unpacked, req.OverrideSdkVersion, req.OverrideKeyGeneration);
         }
         else
         {
@@ -51,6 +50,7 @@ public static class NspBuildService
             if (mode == BuildMode.UnpackOnly)
             {
                 log("━━ 언팩 완료 ━━", LogLevel.Ok);
+
                 return dirs.Unpacked;
             }
         }
@@ -90,7 +90,7 @@ public static class NspBuildService
         foreach (var settings in settingsList)
             StepControlNca(settings, unpackResult, progress, log, ct);
 
-        StepBuildDlcNsps(req, dirs, baseSettings, progress, log, ct);
+        DlcNspBuilder.BuildDlcNsps(req, dirs, baseSettings, progress, log, ct);
         StepMetaNca(settingsList, progress, log, ct);
 
         return StepPackage(req, baseSettings, unpackResult, progress, log, ct);
@@ -186,181 +186,12 @@ public static class NspBuildService
         progress.Report((0, "Program NCA 생성 중..."));
 
         if (req.HasPatch)
-            ApplyPatch(req.PatchDir, unpackResult, progress, log);
+            NspPatchApplier.ApplyPatch(req.PatchDir, unpackResult, progress, log);
 
         settings.NcaType = LibHac.FsSystem.NcaHeader.ContentType.Program;
         settings.ProgramNcaPath = NcaGenerator.GenerateProgramNca(settings, progress, ct) ?? string.Empty;
 
         log($"  Program NCA: {Path.GetFileName(settings.ProgramNcaPath)} ({sw.Elapsed.TotalSeconds}s)", LogLevel.Ok);
-    }
-
-    private static void ApplyPatch(string patchDir, UnpackResult unpackResult, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log)
-    {
-        string exefsDir = unpackResult.ExefsDirs.GetValueOrDefault((byte)0, string.Empty);
-        string romfsDir = unpackResult.RomfsDirs.GetValueOrDefault((byte)0, string.Empty);
-        string patchExefs = Path.Combine(patchDir, "exefs");
-        string patchRomfs = Path.Combine(patchDir, "romfs");
-
-        if (Directory.Exists(patchExefs))
-        {
-            progress.Report((-1, "한글패치 ExeFS 병합 중..."));
-            log($"  한글패치 ExeFS 병합: {patchExefs}", LogLevel.Info);
-            MergeDirectory(patchExefs, exefsDir);
-        }
-        if (Directory.Exists(patchRomfs))
-        {
-            progress.Report((-1, "한글패치 RomFS 병합 중..."));
-            log($"  한글패치 RomFS 병합: {patchRomfs}", LogLevel.Info);
-            MergeDirectory(patchRomfs, romfsDir);
-        }
-
-        if (Directory.Exists(patchDir))
-        {
-            var xdeltaFiles = Directory.EnumerateFiles(patchDir, "*.xdelta", SearchOption.AllDirectories)
-                                       .OrderBy(f => f)
-                                       .ToList();
-
-            if (xdeltaFiles.Count > 0)
-            {
-                progress.Report((-1, "xdelta 바이너리 패치 적용 중..."));
-                log($"  발견된 xdelta 패치 수: {xdeltaFiles.Count}개", LogLevel.Info);
-
-                string unpackedRoot = Path.GetDirectoryName(exefsDir)!;
-
-                foreach (var xdeltaPath in xdeltaFiles)
-                {
-                    string targetFileName = Path.GetFileNameWithoutExtension(xdeltaPath);
-                    string relativePath = Path.GetRelativePath(patchDir, xdeltaPath);
-                    string relativeTargetKey = Path.Combine(Path.GetDirectoryName(relativePath) ?? string.Empty, targetFileName);
-                    var targetFiles = new List<string>();
-                    string absoluteExactPath = Path.Combine(unpackedRoot, relativeTargetKey);
-
-                    if (File.Exists(absoluteExactPath))
-                        targetFiles.Add(absoluteExactPath);
-                    else
-                    {
-                        if (!string.IsNullOrEmpty(exefsDir))
-                            targetFiles.AddRange(Directory.EnumerateFiles(exefsDir, targetFileName, SearchOption.AllDirectories));
-                        if (!string.IsNullOrEmpty(romfsDir))
-                            targetFiles.AddRange(Directory.EnumerateFiles(romfsDir, targetFileName, SearchOption.AllDirectories));
-                    }
-
-                    if (targetFiles.Count > 0)
-                    {
-                        foreach (var targetPath in targetFiles.Distinct())
-                        {
-                            string displayPath = Path.GetRelativePath(unpackedRoot, targetPath);
-
-                            log($"  xdelta 패치 적용: {Path.GetFileName(xdeltaPath)} ➡️ {displayPath}", LogLevel.Info);
-
-                            string tempOutPath = targetPath + ".patched";
-
-                            try
-                            {
-                                var wrapper = new Progress<ProgressInfo>(p =>
-                                {
-                                    int currentStep = 80 + (int)(p.Percent * 0.1);
-
-                                    if (currentStep > 80)
-                                        progress?.Report((currentStep, string.Empty));
-                                });
-
-                                Xdelta3.ApplyPatch(targetPath, Path.GetFullPath(xdeltaPath), tempOutPath, wrapper);
-
-                                if (File.Exists(tempOutPath))
-                                {
-                                    File.Delete(targetPath);
-                                    File.Move(tempOutPath, targetPath);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                log($"  ❌ xdelta 패치 실패 ({Path.GetFileName(xdeltaPath)}): {ex.Message}", LogLevel.Error);
-                                if (File.Exists(tempOutPath)) File.Delete(tempOutPath);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        log($"  ⚠️ xdelta 대상 원본 파일을 찾을 수 없음: {targetFileName}", LogLevel.Info);
-                    }
-                }
-            }
-        }
-    }
-
-    private static void ApplyDlcPatch(string dlcPatchRoot, string titleIdStr, string romfsDir, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log)
-    {
-        string dlcPatchDir = Path.Combine(dlcPatchRoot, titleIdStr);
-
-        if (!Directory.Exists(dlcPatchDir))
-            return;
-
-        string patchRomfs = Path.Combine(dlcPatchDir, "romfs");
-
-        if (Directory.Exists(patchRomfs))
-        {
-            progress.Report((-1, $"DLC 패치 RomFS 병합 중... ({titleIdStr})"));
-            log($"  DLC 패치 RomFS 병합: {patchRomfs}", LogLevel.Info);
-            MergeDirectory(patchRomfs, romfsDir);
-        }
-
-        var xdeltaFiles = Directory.EnumerateFiles(dlcPatchDir, "*.xdelta", SearchOption.AllDirectories)
-                                   .OrderBy(f => f)
-                                   .ToList();
-
-        if (xdeltaFiles.Count == 0) 
-            return;
-
-        progress.Report((-1, $"DLC xdelta 패치 적용 중... ({titleIdStr})"));
-        log($"  발견된 DLC xdelta 패치 수: {xdeltaFiles.Count}개", LogLevel.Info);
-
-        foreach (var xdeltaPath in xdeltaFiles)
-        {
-            string targetFileName = Path.GetFileNameWithoutExtension(xdeltaPath);
-            var targetFiles = Directory.EnumerateFiles(romfsDir, targetFileName, SearchOption.AllDirectories).ToList();
-
-            if (targetFiles.Count == 0)
-            {
-                log($"  ⚠️ DLC xdelta 대상 원본 파일을 찾을 수 없음: {targetFileName}", LogLevel.Info);
-                continue;
-            }
-
-            foreach (var targetPath in targetFiles)
-            {
-                string displayPath = Path.GetRelativePath(romfsDir, targetPath);
-
-                log($"  DLC xdelta 패치 적용: {Path.GetFileName(xdeltaPath)} ➡️ {displayPath}", LogLevel.Info);
-
-                string tempOutPath = targetPath + ".patched";
-
-                try
-                {
-                    var wrapper = new Progress<ProgressInfo>(p =>
-                    {
-                        int currentStep = 80 + (int)(p.Percent * 0.1);
-
-                        if (currentStep > 80)
-                            progress?.Report((currentStep, string.Empty));
-                    });
-
-                    Xdelta3.ApplyPatch(targetPath, Path.GetFullPath(xdeltaPath), tempOutPath, wrapper);
-
-                    if (File.Exists(tempOutPath))
-                    {
-                        File.Delete(targetPath);
-                        File.Move(tempOutPath, targetPath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    log($"  ❌ DLC xdelta 패치 실패 ({Path.GetFileName(xdeltaPath)}): {ex.Message}", LogLevel.Error);
-
-                    if (File.Exists(tempOutPath)) 
-                        File.Delete(tempOutPath);
-                }
-            }
-        }
     }
 
     private static void StepManualNcas(List<NcaGenerationOptions> settingsList, UnpackResult unpackResult, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log, CancellationToken ct)
@@ -429,79 +260,6 @@ public static class NspBuildService
         settings.ControlNcaPath = NcaGenerator.GenerateRomfsNca(controlSettings, "Control", progress, ct) ?? string.Empty;
 
         log($"  Control NCA: {Path.GetFileName(settings.ControlNcaPath)} ({sw.Elapsed.TotalSeconds:F2}s)", LogLevel.Ok);
-    }
-
-    private static void StepBuildDlcNsps(BuildRequest req, WorkDirs dirs, NcaGenerationOptions baseSettings, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log, CancellationToken ct)
-    {
-        string dlcBaseDir = Path.Combine(dirs.Unpacked, "DLCs");
-
-        if (!Directory.Exists(dlcBaseDir)) 
-            return;
-
-        var sw = Stopwatch.StartNew();
-
-        log("━━ 7단계(7/9): DLC 빌드 시작 ━━", LogLevel.Info);
-
-        int dlcCount = 0;
-
-        foreach (var dlcDir in Directory.GetDirectories(dlcBaseDir))
-        {
-            ct.ThrowIfCancellationRequested();
-
-            string titleIdStr = Path.GetFileName(dlcDir);
-
-            if (!ulong.TryParse(titleIdStr, System.Globalization.NumberStyles.HexNumber, null, out ulong titleId))
-                continue;
-
-            string romfsPath = Path.Combine(dlcDir, "romfs");
-
-            if (req.HasDlcPatch)
-                ApplyDlcPatch(req.DlcPatchDir, titleIdStr, romfsPath, progress, log);
-
-            bool hasRomfs = Directory.Exists(romfsPath) && Directory.EnumerateFileSystemEntries(romfsPath).Any();
-
-            log($"  DLC 빌드 시도: {titleIdStr}", LogLevel.Info);
-
-            var dlcSettings = new NcaGenerationOptions
-            {
-                TitleId = titleId,
-                TempDirectory = Path.Combine(dirs.Temp, "dlc_" + titleIdStr),
-                OutDirectory = baseSettings.OutDirectory,
-                RomfsDirectory = hasRomfs ? romfsPath : string.Empty,
-                TitleType = LibHac.Ncm.ContentMetaType.AddOnContent,
-                NcaType = LibHac.FsSystem.NcaHeader.ContentType.PublicData,
-                SdkVersion = req.OverrideSdkVersion ?? baseSettings.SdkVersion,
-                KeyGeneration = req.OverrideKeyGeneration ?? baseSettings.KeyGeneration,
-                KeySet = baseSettings.KeySet,
-                KeyAreaKey = baseSettings.KeyAreaKey,
-                NcaSig = NcaSigType.Zero,
-                Plaintext = 0
-            };
-
-            try
-            {
-                Directory.CreateDirectory(dlcSettings.TempDirectory);
-
-                if (hasRomfs)
-                    dlcSettings.PublicDataNcaPath = NcaGenerator.GenerateRomfsNca(dlcSettings, "DLC", progress, ct) ?? string.Empty;
-
-                NcaGenerator.GenerateMetaNca([dlcSettings], progress, ct);
-
-                log($"  DLC 완료: {titleIdStr}", LogLevel.Ok);
-                dlcCount++;
-            }
-            catch (Exception ex)
-            {
-                log($"  DLC 실패: {titleIdStr} - {ex.Message}", LogLevel.Error);
-            }
-            finally
-            {
-                if (Directory.Exists(dlcSettings.TempDirectory))
-                    Directory.Delete(dlcSettings.TempDirectory, true);
-            }
-        }
-
-        log($"  총 ({dlcCount})개의 DLC 빌드 완료 : ({sw.Elapsed.TotalSeconds:F2}s)", LogLevel.Ok);
     }
 
     private static void StepMetaNca(List<NcaGenerationOptions> settingsList, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log, CancellationToken ct)
@@ -590,121 +348,7 @@ public static class NspBuildService
 
         progress.Report((100, "완료"));
         log($"  출력: {finalNsp} ({sw.Elapsed.TotalSeconds:F2}s)", LogLevel.Ok);
+
         return finalNsp;
-    }
-
-    private static UnpackResult ScanExistingUnpackedDir(string unpackedDir, uint? overrideSdkVersion = null, byte? overrideKeyGeneration = null)
-    {
-        string nacpPath = Path.Combine(unpackedDir, "control", "control.nacp");
-        string controlFile = Directory.GetFiles(unpackedDir, "control*.nca").FirstOrDefault() ?? string.Empty;
-        var (krTitle, enTitle, displayVersion, titleId) = LibHacHelper.ReadNacpInfo(nacpPath);
-        byte keyGeneration = 1;
-        uint sdkVersion = 0;
-        uint gameVersion = 0;
-
-        if (File.Exists(controlFile))
-        {
-            (keyGeneration, sdkVersion) = LibHacHelper.ReadControlNcaInfo(controlFile);
-
-            string fileName = Path.GetFileNameWithoutExtension(controlFile);
-
-            if (fileName.Contains('_'))
-                _ = uint.TryParse(fileName.Split('_')[1], out gameVersion);
-        }
-
-        var dlcs = new List<DlcUnpackInfo>();
-        string dlcBaseDir = Path.Combine(unpackedDir, "DLCs");
-
-        if (Directory.Exists(dlcBaseDir))
-        {
-            foreach (var dlcDir in Directory.GetDirectories(dlcBaseDir))
-            {
-                string titleIdStr = Path.GetFileName(dlcDir);
-                if (ulong.TryParse(titleIdStr, System.Globalization.NumberStyles.HexNumber, null, out ulong dlcTitleId))
-                {
-                    dlcs.Add(new DlcUnpackInfo
-                    {
-                        TitleId = dlcTitleId,
-                        Dir = Path.Combine("DLCs", titleIdStr)
-                    });
-                }
-            }
-        }
-
-        var exefsDirs = new Dictionary<byte, string>();
-        var romfsDirs = new Dictionary<byte, string>();
-        var logoDirs = new Dictionary<byte, string>();
-        var controlDirs = new Dictionary<byte, string>();
-        var htmlDocDirs = new Dictionary<byte, string>();
-        var legalDirs = new Dictionary<byte, string>();
-
-        for (byte i = 0; i < 16; i++)
-        {
-            string suffix = i == 0 ? string.Empty : i.ToString();
-            string exefs = Path.Combine(unpackedDir, $"exefs{suffix}");
-
-            if (Directory.Exists(exefs)) 
-                exefsDirs[i] = exefs;
-
-            string romfs = Path.Combine(unpackedDir, $"romfs{suffix}");
-
-            if (Directory.Exists(romfs)) 
-                romfsDirs[i] = romfs;
-
-            string logo = Path.Combine(unpackedDir, $"logo{suffix}");
-
-            if (Directory.Exists(logo)) 
-                logoDirs[i] = logo;
-
-            string control = Path.Combine(unpackedDir, $"control{suffix}");
-
-            if (Directory.Exists(control)) 
-                controlDirs[i] = control;
-
-            string htmldoc = Path.Combine(unpackedDir, $"htmldoc{suffix}");
-
-            if (Directory.Exists(htmldoc)) 
-                htmlDocDirs[i] = htmldoc;
-
-            string legal = Path.Combine(unpackedDir, $"legal{suffix}");
-
-            if (Directory.Exists(legal)) 
-                legalDirs[i] = legal;
-
-            if (i > 0 && !exefsDirs.ContainsKey(i) && !romfsDirs.ContainsKey(i)) 
-                break;
-        }
-
-        return new UnpackResult
-        {
-            TitleId = titleId,
-            GameVersion = gameVersion,
-            BaseSdkVersion = overrideSdkVersion ?? sdkVersion,
-            BaseKeyGeneration = overrideKeyGeneration ?? keyGeneration,
-            DisplayVersion = displayVersion,
-            KrTitle = krTitle,
-            EnTitle = enTitle,
-            ExefsDirs = exefsDirs,
-            RomfsDirs = romfsDirs,
-            LogoDirs = logoDirs,
-            ControlDirs = controlDirs,
-            HtmlDocDirs = htmlDocDirs,
-            LegalDirs = legalDirs,            
-            Dlcs = dlcs
-        };
-    }
-
-    private static void MergeDirectory(string srcDir, string dstDir)
-    {
-        Directory.CreateDirectory(dstDir);
-
-        foreach (var file in Directory.EnumerateFiles(srcDir, "*", SearchOption.AllDirectories))
-        {
-            string rel = Path.GetRelativePath(srcDir, file);
-            string dest = Path.Combine(dstDir, rel);
-
-            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-            File.Copy(file, dest, overwrite: true);
-        }
     }
 }
