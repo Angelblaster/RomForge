@@ -1,12 +1,6 @@
 ﻿<UserControl x:Class="RomForge.Controls._3DS.InstalledTitlesTab"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:converters="clr-namespace:Common.WPF.Converters;assembly=Common.WPF">
-
-    <UserControl.Resources>
-        <converters:RegionToImageConverter x:Key="RegionToFlagImageConverter"/>
-        <converters:LockIconConverter x:Key="LockIconConverter"/>
-    </UserControl.Resources>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid Background="#1E1E1E">
         <Grid.ColumnDefinitions>
@@ -144,7 +138,7 @@
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <Image Width="24" Height="24" Margin="8,0" 
-                                       Source="{Binding ProductCode, Converter={StaticResource RegionToFlagImageConverter}}" ToolTip="{Binding Region}"/>
+                                       Source="{Binding ProductCode, Converter={StaticResource RegionToImageConverter}}" ToolTip="{Binding Region}"/>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>

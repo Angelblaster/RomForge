@@ -5,15 +5,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:RomForge.ViewModels._3DS"
              xmlns:helpers="clr-namespace:RomForge.Core.UI.Helpers;assembly=RomForge.Core"
-             xmlns:converters="clr-namespace:RomForge.Converters"
-             xmlns:converters2="clr-namespace:Common.WPF.Converters;assembly=Common.WPF"
              mc:Ignorable="d"
              d:DesignHeight="650" d:DesignWidth="1016"
              Background="#1E1E1E">
-
-    <UserControl.Resources>
-        <converters2:LockIconConverter x:Key="LockIconConverter"/>
-    </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -178,6 +172,14 @@
                                             </Style>
                                         </ComboBox.ItemContainerStyle>
                                     </ComboBox>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+
+                        <GridViewColumn Header="지역" Width="60">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Image Width="24" Height="24" Margin="8,0" Source="{Binding ProductCode, Converter={StaticResource RegionToImageConverter}}" ToolTip="{Binding Region}"/>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>

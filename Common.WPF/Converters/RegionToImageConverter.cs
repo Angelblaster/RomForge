@@ -28,8 +28,7 @@ namespace Common.WPF.Converters
                     'J' => "japanese.png",
                     'K' => "korean.png",
                     'E' or 'U' or 'N' => "american.png",
-                    'P' => "european.png",
-                    'A' => "australia.png",
+                    'P' => "european.png",                    
                     'C' => "chinese.png",
                     'T' => "taiwanese.png",
                     'G' => "german.png",
@@ -38,7 +37,7 @@ namespace Common.WPF.Converters
                     'I' => "italian.png",
                     'H' => "netherlands.png",
                     'R' => "russian.png",
-                    'W' or 'X' or 'Z' => "world.png",
+                    'A' or 'W' or 'X' or 'Z' => "world.png",
                     _ => "unknown.png"
                 };
 

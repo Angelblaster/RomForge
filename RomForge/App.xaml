@@ -4,6 +4,7 @@
              xmlns:local="clr-namespace:RomForge"
              xmlns:converters="clr-namespace:RomForge.Converters"
              xmlns:wpfconverters="clr-namespace:NSW.WPF.Converters;assembly=NSW.WPF"
+             xmlns:cmnconverters="clr-namespace:Common.WPF.Converters;assembly=Common.WPF"
              StartupUri="Views/MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
@@ -21,7 +22,10 @@
             <converters:BoolToImageConverter x:Key="BoolToImageConverter"/>
             <converters:ProgressToStarConverter x:Key="ProgressToStarConverter"/>
             <converters:ProgressToWidthConverter x:Key="ProgressToWidthConverter"/>            
-            <wpfconverters:PbpLanguageToFlagConverter x:Key="PbpLanguageToFlagConverter"/>            
+            <wpfconverters:PbpLanguageToFlagConverter x:Key="PbpLanguageToFlagConverter"/>
+            <cmnconverters:LockIconConverter x:Key="LockIconConverter"/>
+            <cmnconverters:RegionToImageConverter x:Key="RegionToImageConverter"/>
+            <converters:Locale3dsLanguageToLabelConverter x:Key="LanguageLabelConverter"/>
             
             <Style TargetType="TabControl">
                 <Setter Property="Background" Value="Transparent"/>
