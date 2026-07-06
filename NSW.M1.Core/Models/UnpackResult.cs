@@ -11,6 +11,7 @@ public class UnpackResult
     public Dictionary<byte, string> HtmlDocDirs { get; set; } = [];
     public Dictionary<byte, string> LegalDirs { get; set; } = [];
     public List<DlcUnpackInfo> Dlcs { get; set; } = [];
+    public Dictionary<byte, string> RawProgramNcaPaths { get; set; } = [];
 
     [JsonIgnore]
     public int DlcCount => Dlcs.Count;

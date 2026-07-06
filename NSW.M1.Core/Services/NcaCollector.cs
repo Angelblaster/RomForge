@@ -15,7 +15,8 @@ namespace NSW.M1.Core.Services;
 
 public sealed record CollectedNcas(
     Dictionary<byte, Nca> BaseProgs, Dictionary<byte, Nca> UpdateProgs, Dictionary<byte, Nca> BaseControls, Dictionary<byte, Nca> UpdateControls, Dictionary<byte, Nca> BaseHtmls, 
-    Dictionary<byte, Nca> UpdateHtmls, Dictionary<byte, Nca> BaseLegals, Dictionary<byte, Nca> UpdateLegals, List<Nca> DlcNcas, uint PatchVersion, HashSet<byte> CreateOnlyOffsets);
+    Dictionary<byte, Nca> UpdateHtmls, Dictionary<byte, Nca> BaseLegals, Dictionary<byte, Nca> UpdateLegals, List<Nca> DlcNcas, uint PatchVersion, HashSet<byte> CreateOnlyOffsets, 
+    Dictionary<byte, Nca> CreateOnlyRawNcas, Dictionary<byte, string> CreateOnlyNcaIds);
 
 public sealed class NcaCollector(KeySet keySet)
 {
@@ -39,6 +40,8 @@ public sealed class NcaCollector(KeySet keySet)
         var deltaToBaseNcaId = new Dictionary<string, string>();
         var createNcaIds = new HashSet<string>();
         var createOnlyOffsets = new HashSet<byte>();
+        var createOnlyRawNcas = new Dictionary<byte, Nca>();
+        var createOnlyNcaIds = new Dictionary<byte, string>();
 
         foreach (var cnmt in EnumerateCnmts(partitions))
         {
@@ -149,10 +152,12 @@ public sealed class NcaCollector(KeySet keySet)
                 baseProgs[bpOffset] = nca;
             else if (updateProgReverse.TryGetValue(currentId, out var upOffset))
             {
-                if (createNcaIds.Contains(currentId))
+                if (!baseProgIds.ContainsKey(upOffset)) 
                 {
                     baseProgs[upOffset] = nca;
                     createOnlyOffsets.Add(upOffset);
+                    createOnlyRawNcas[upOffset] = nca;
+                    createOnlyNcaIds[upOffset] = currentId;
                 }
                 else if (deltaToBaseNcaId.TryGetValue(currentId, out var targetBaseId) && baseProgReverse.TryGetValue(targetBaseId, out var realBaseOffset))
                     updateProgs[realBaseOffset] = nca;
@@ -175,7 +180,7 @@ public sealed class NcaCollector(KeySet keySet)
                 dlcNcas.Add(nca);
         }
 
-        return new CollectedNcas(baseProgs, updateProgs, baseControls, updateControls, baseHtmls, updateHtmls, baseLegals, updateLegals, dlcNcas, patchVersion, createOnlyOffsets);
+        return new CollectedNcas(baseProgs, updateProgs, baseControls, updateControls, baseHtmls, updateHtmls, baseLegals, updateLegals, dlcNcas, patchVersion, createOnlyOffsets, createOnlyRawNcas, createOnlyNcaIds);
     }
 
     private IEnumerable<LibHac.Tools.Ncm.Cnmt> EnumerateCnmts(IEnumerable<IFileSystem> partitions)

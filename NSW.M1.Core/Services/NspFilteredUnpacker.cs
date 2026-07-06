@@ -7,8 +7,8 @@ public class NspFilteredUnpacker(KeySet keySet, List<string> targetFiles) : NspU
 {
     private readonly List<string> _targetFiles = targetFiles;
 
-    public UnpackResult Unpack(BuildRequest req, string outDir, bool withControlNca, IProgress<(int pct, string label)>? progress = null, CancellationToken ct = default)
-        => UnpackCore(req, outDir, withControlNca, progress, ct);
+    public async Task<UnpackResult> Unpack(BuildRequest req, string outDir, bool withControlNca, IProgress<(int pct, string label)>? progress = null, CancellationToken ct = default)
+        => await UnpackCore(req, outDir, withControlNca, progress, ct);
 
     protected override ProgressContext CreateProgressContext(List<string> inputPaths, CollectedNcas ncas)
     {

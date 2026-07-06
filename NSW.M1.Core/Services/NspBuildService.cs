@@ -15,14 +15,14 @@ namespace NSW.M1.Core.Services;
 
 public static class NspBuildService
 {
-    public static string Run(BuildRequest req, BuildMode mode, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log, CancellationToken ct = default)
+    public static async Task<string> Run(BuildRequest req, BuildMode mode, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log, CancellationToken ct = default)
     {
         var keySet = KeySetProvider.Instance.KeySet;
 
-        return RunProcess(req, mode, keySet, progress, log, ct);
+        return await RunProcess(req, mode, keySet, progress, log, ct);
     }
 
-    private static string RunProcess(BuildRequest req, BuildMode mode, KeySet keySet, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log, CancellationToken ct = default)
+    private static async Task<string> RunProcess(BuildRequest req, BuildMode mode, KeySet keySet, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log, CancellationToken ct = default)
     {
         var dirs = new WorkDirs(req.OutputDir);
 
@@ -45,7 +45,7 @@ public static class NspBuildService
         }
         else
         {
-            unpackResult = StepUnpack(req, keySet, dirs, progress, log, ct);
+            unpackResult = await StepUnpack(req, keySet, dirs, progress, log, ct);
 
             if (mode == BuildMode.UnpackOnly)
             {
@@ -81,8 +81,23 @@ public static class NspBuildService
 
         foreach (var settings in settingsList)
         {
-            StepNpdm(settings, log, ct);
-            StepProgramNca(req, settings, unpackResult, progress, log, ct);
+            if (unpackResult.RawProgramNcaPaths.TryGetValue(settings.IdOffset, out var rawPath))
+            {
+                byte[] hash;
+                using (var fs = File.OpenRead(rawPath))
+                    hash = System.Security.Cryptography.SHA256.HashData(fs);
+
+                string realNcaId = Convert.ToHexString(hash, 0, 16).ToLowerInvariant();
+                string dest = Path.Combine(dirs.BuildNca, $"{realNcaId}.nca");
+
+                File.Copy(rawPath, dest, overwrite: true);
+                settings.ProgramNcaPath = dest;
+            }
+            else
+            {
+                StepNpdm(settings, log, ct);
+                StepProgramNca(req, settings, unpackResult, progress, log, ct);
+            }
         }
 
         StepManualNcas(settingsList, unpackResult, progress, log, ct);
@@ -96,7 +111,7 @@ public static class NspBuildService
         return StepPackage(req, baseSettings, unpackResult, progress, log, ct);
     }
 
-    private static UnpackResult StepUnpack(BuildRequest req, KeySet libHacKeySet, WorkDirs dirs, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log, CancellationToken ct)
+    private static async Task<UnpackResult> StepUnpack(BuildRequest req, KeySet libHacKeySet, WorkDirs dirs, IProgress<(int pct, string label)> progress, Action<string, LogLevel> log, CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
 
@@ -104,7 +119,7 @@ public static class NspBuildService
         progress.Report((0, "언패킹 중..."));
 
         var unpacker = new NspUnpacker(libHacKeySet);
-        var result = unpacker.Unpack(req, dirs.Unpacked, progress, ct);
+        var result = await unpacker.Unpack(req, dirs.Unpacked, progress, ct);
 
         log($"  언패킹 완료 ({sw.Elapsed.TotalSeconds:F2}s)", LogLevel.Ok);
 
@@ -125,8 +140,13 @@ public static class NspBuildService
 
         var settingsList = new List<NcaGenerationOptions>();
 
-        foreach (var (idOffset, exefsDir) in result.ExefsDirs.OrderBy(kv => kv.Key))
+        var allIdOffsets = result.ExefsDirs.Keys
+            .Union(result.RawProgramNcaPaths.Keys)
+            .OrderBy(k => k);
+
+        foreach (var idOffset in allIdOffsets)
         {
+            result.ExefsDirs.TryGetValue(idOffset, out var exefsDir);
             result.RomfsDirs.TryGetValue(idOffset, out var romfsDir);
             result.LogoDirs.TryGetValue(idOffset, out var logoDir);
 
@@ -136,7 +156,7 @@ public static class NspBuildService
                 TitleId = result.TitleId,
                 TempDirectory = dirs.Temp,
                 OutDirectory = dirs.BuildNca,
-                ExefsDirectory = exefsDir,
+                ExefsDirectory = exefsDir ?? string.Empty,
                 RomfsDirectory = romfsDir ?? string.Empty,
                 LogoDirectory = logoDir ?? string.Empty,
                 BackupDirectory = Path.Combine(Path.GetDirectoryName(dirs.Temp)!, "backups"),

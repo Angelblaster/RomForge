@@ -17,7 +17,7 @@ public abstract class NspUnpackerBase(KeySet keySet)
 
     public string BaseNspPath { get; private set; } = string.Empty;
 
-    protected UnpackResult UnpackCore(BuildRequest req, string outDir, bool withControlNca, IProgress<(int pct, string label)>? progress, CancellationToken ct)
+    protected async Task<UnpackResult> UnpackCore(BuildRequest req, string outDir, bool withControlNca, IProgress<(int pct, string label)>? progress, CancellationToken ct)
     {
         BaseNspPath = req.BaseFilePath;
         Directory.CreateDirectory(outDir);
@@ -80,11 +80,30 @@ public abstract class NspUnpackerBase(KeySet keySet)
                 var effectiveProg = baseProg ?? updateProg!;
                 var patchProg = baseProg != null ? updateProg : null;
 
-                if (effectiveProg.CanOpenSection(NcaSectionType.Code))
+                if (ncas.CreateOnlyRawNcas.TryGetValue(idOffset, out var rawNca))
+                {
+                    string ncaId = ncas.CreateOnlyNcaIds[idOffset];
+                    string rawDir = Path.Combine(outDir, "rawprograms");
+                    Directory.CreateDirectory(rawDir);
+
+                    string rawPath = Path.Combine(rawDir, $"{ncaId}.nca");
+
+                    using (var inStream = rawNca.BaseStorage.AsStream())
+                    using (var outStream = File.Create(rawPath))
+                    {
+                        await NcaRecryptService.RecryptAsync(inStream, outStream, 0, _keySet, ct: ct);
+                    }
+
+                    result.RawProgramNcaPaths[idOffset] = rawPath;
+                }
+                else
+                {
+                    if (effectiveProg.CanOpenSection(NcaSectionType.Code))
                     result.ExefsDirs[idOffset] = extractor.ExtractExeFs(effectiveProg, patchProg, exefsName, outDir, progCtx, progress, ct);
 
-                if (effectiveProg.CanOpenSection(NcaSectionType.Data))
-                    result.RomfsDirs[idOffset] = extractor.ExtractRomFs(effectiveProg, patchProg, romfsName, outDir, progCtx, ncas.CreateOnlyOffsets.Contains(idOffset), progress, ct);
+                    if (effectiveProg.CanOpenSection(NcaSectionType.Data))
+                        result.RomfsDirs[idOffset] = extractor.ExtractRomFs(effectiveProg, patchProg, romfsName, outDir, progCtx, ncas.CreateOnlyOffsets.Contains(idOffset), progress, ct);
+                }
 
                 var logoDir = extractor.ExtractLogo(effectiveProg, logoName, outDir, progCtx, progress, ct);
 

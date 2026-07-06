@@ -155,6 +155,9 @@ public static class NspPatchApplier
 
         foreach (var file in Directory.EnumerateFiles(srcDir, "*", SearchOption.AllDirectories))
         {
+            if (file.EndsWith(".xdelta", StringComparison.OrdinalIgnoreCase))
+                continue;
+
             string rel = Path.GetRelativePath(srcDir, file);
             string dest = Path.Combine(dstDir, rel);
 

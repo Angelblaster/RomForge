@@ -178,7 +178,7 @@ namespace RomForge.ViewModels.Switch
                 ProgressTime = $"{_totalSw.Elapsed:mm\\:ss} 경과";
             });
 
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 try
                 {
@@ -189,7 +189,7 @@ namespace RomForge.ViewModels.Switch
                     if(Context?.TargetIdOffset.HasValue == true)
                         req.TargetIdOffset = Context?.TargetIdOffset;
 
-                    string finalResult = NspBuildService.Run(req, mode, progress, (msg, lvl) => Log(msg, lvl), token);
+                    string finalResult = await NspBuildService.Run(req, mode, progress, (msg, lvl) => Log(msg, lvl), token);
 
                     Log($"완료! 총 소요: {_totalSw.Elapsed:mm\\:ss}", LogLevel.Ok);
 
